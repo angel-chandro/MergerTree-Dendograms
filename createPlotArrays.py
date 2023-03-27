@@ -148,7 +148,7 @@ def getStartProgenitors(opt,treedata,SelIndex):
 		haloID = progenID
 		haloIndex = progenIndex
 		haloSnap = progenSnap
-		snapname = "Snap_%03d" %haloSnap
+		snapname = "Snap_%03d" %haloSnap; #print('snapname:',snapname); print('haloIndex:',haloIndex); print(treedata[snapname]["Progenitor"])
 
 		if(haloSnap<opt.startSnap):
 			raise SystemExit("Going to a halo at snapshot %i but the start snapshot for plotting is %i so it cannot be plotted, please adjust the startSnap" %(haloSnap,opt.startSnap))
@@ -297,12 +297,12 @@ def createPlotArrays(opt,plotOpt,treedata,SelIndex,outdir='',outputArrays=False)
 	#Now we want to walk up from the AllStartProgenitors to build the tree and create the arrays
 	for ibranch in range(numBranches):
 		#Extract the Root Progenitor for this branch
-		haloID = AllStartProgenitors[ibranch]
+		haloID = AllStartProgenitors[ibranch]; #print(haloID)
 		
 		#Move up the branch setting the plotting data as we go
 		while(True):
 			#Extract the information for this halo
-			index = int(haloID%opt.HALOIDVAL-1)
+			index = int(haloID%opt.HALOIDVAL-1); #print('index:',index)
 			snap = int(haloID/opt.HALOIDVAL)
 
 
@@ -321,7 +321,7 @@ def createPlotArrays(opt,plotOpt,treedata,SelIndex,outdir='',outputArrays=False)
 				if(abs(xposdiff)>0.8*opt.boxsize):
 					pos[k]=pos[k]-opt.boxsize if(xposdiff>0) else pos[k]+opt.boxsize
 			#Store its descendant
-			descendant = treedata[snapKey]["Descendant"][index]
+			descendant = treedata[snapKey]["Descendant"][index]; #print('Descendant:',descendant)
 
 			#Set the size and col data to what was requested
 			plotData["SizeData"][isnap,ibranch] = treedata[snapKey]["SizeData"][index]
@@ -329,7 +329,7 @@ def createPlotArrays(opt,plotOpt,treedata,SelIndex,outdir='',outputArrays=False)
 			if(plotOpt.WWflag):
 				plotData["ColData"][isnap,ibranch] = -2 if(treedata[snapKey]["WWHaloFlag"][index]) else treedata[snapKey]["ColData"][index]
 			else:
-				plotData["ColData"][isnap,ibranch] = treedata[snapKey]["ColData"][index]
+				plotData["ColData"][isnap,ibranch] = treedata[snapKey]["ColData"][index]; #print('HERE:',plotData["ColData"][isnap,ibranch])
 
 			if(plotOpt.overplotdata):
 					plotData["OverPlotData"][isnap,ibranch] = treedata[snapKey]["OverPlotData"][index]
@@ -428,7 +428,7 @@ def createPlotArrays(opt,plotOpt,treedata,SelIndex,outdir='',outputArrays=False)
 
 			#Now move onto the next halo up the branch
 			prevpos[:] = pos
-			haloID = descendant
+			haloID = descendant; #print('index2:',index)
 
 	##### Now lets sort the arrays using the data in the plotData["SizeData"] array
 

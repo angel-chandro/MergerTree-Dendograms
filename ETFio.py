@@ -195,7 +195,7 @@ def LoadETFCatalogue(filename,plotOpt):
 					colDataKey= "Radius"
 
 		else:
-			print("Setting the HostHaloID as the colour, please set plotColorBar = 1 in plot_config.cfg if you would like a different dataset to be used")
+			print("Setting the HostHaloID as the colour, please set plotColorBar = 1 in plot_config.cfg if you would like a different dataset to be used"); print('HOST')
 			colDataKey= "HostHaloID"
 
 		if((plotOpt.plotColorBar==0) & (colDataKey!="HostHaloID")):
@@ -257,7 +257,7 @@ def LoadETFCatalogue(filename,plotOpt):
 					treedata[snapKey][key] = np.array(hdffile[snapKey][key])
 
 		treedata[snapKey]["SizeData"] = np.array(hdffile[snapKey][sizeDataKey])
-		treedata[snapKey]["ColData"] = np.array(hdffile[snapKey][colDataKey]) 
+		treedata[snapKey]["ColData"] = np.array(hdffile[snapKey][colDataKey]); #print('treedata[snapKey]["ColData"]:',treedata[snapKey]["ColData"])
 		if(plotOpt.overplotdata):
 			treedata[snapKey]["OverPlotData"] = np.array(hdffile[snapKey][overDataKey]) 
 		

@@ -18,10 +18,10 @@ def setColData(plotOpt,colData,mainBranchIDs=[]):
 
 	"""
 
-	tmpColData = np.empty(colData.shape,dtype=object)
+	tmpColData = np.empty(colData.shape,dtype=object); #print('colData:',colData)
 
 	haloSel = colData==-1
-	tmpColData[colData==-1] = "b"
+	tmpColData[colData==-1] = "b"; #print('b:',tmpColData[colData==-1])
 
 	mainSubSel = np.isin(colData,mainBranchIDs)
 
@@ -173,7 +173,7 @@ def plotDendogram(plotOpt,plotData,depthIndicator,branchIndicator,sortIndx,SelID
 
 	plotData["xposData"][plotData["xposData"]==-1.0] = plotOpt.plotNumRvir 
 
-	maxBranchSize = np.amax(plotData["SizeData"],axis=0)
+	maxBranchSize = np.amax(plotData["SizeData"],axis=0); print('plotData["SizeData"]:',plotData["SizeData"]); print('maxBranchSize:',maxBranchSize)
 	#Find the number of branches left and the first and final snapshot in the data
 	numBranches = plotData["xposData"].shape[1] 
 	if(numBranches ==1):
@@ -291,7 +291,7 @@ def plotDendogram(plotOpt,plotData,depthIndicator,branchIndicator,sortIndx,SelID
 				patch = Rectangle([xi,yi],width,height)
 				patches.append(patch)
 
-			lines = PatchCollection(patches,linewidth=0,color=plotData["ColData"][:,i][snaps])
+			lines = PatchCollection(patches,linewidth=0,color=plotData["ColData"][:,i][snaps]); #print(plotData["ColData"][:,i][snaps])
 			# lines.set_array(plotData["ColData"][:,i][snaps].decode("UTF-8"))
 
 			axes[i].add_collection(lines)
@@ -379,7 +379,7 @@ def plotDendogram(plotOpt,plotData,depthIndicator,branchIndicator,sortIndx,SelID
 		if(i==0):
 			label = plotOpt.sizeLabel + "$_{\mathrm{,max}}$ ["+ plotOpt.sizeUnit + "]" + " "*plotOpt.maxSizeFontDist + plotOpt.maxSizeFormat %(maxBranchSize[i])
 		else:
-			label = plotOpt.maxSizeFormat %(maxBranchSize[i])
+			label = plotOpt.maxSizeFormat %(maxBranchSize[i]); print('label:',label); print('maxBranchSize[i]:',maxBranchSize[i])
 		ax2.set_xlabel(label,fontsize = plotOpt.maxSizeFontSize, labelpad = 50)#,bbox=dict(facecolor='none', edgecolor='black',linewidth=2,pad=6))
 
 
@@ -420,7 +420,7 @@ def plotDendogram(plotOpt,plotData,depthIndicator,branchIndicator,sortIndx,SelID
 
 
 	#Save the file
-	outfile = plotOpt.outdir+"/%i_mergertree." %(SelID)+plotOpt.fileDesc+".png"
+	outfile = plotOpt.outdir+"/%i_mergertree." %(SelID)+plotOpt.fileDesc+".png"; #outfile = plotOpt.outdir+"/%i_mergertree." %(SelID)+plotOpt.fileDesc+".png";
 
 
 	#Need to increase the resolution when putting the data over the plot
