@@ -151,119 +151,124 @@ class plotOptions(object):
 
 class ETFoptions(object):
 
-	def __init__(self,MTF,filename):
+        def __init__(self,MTF,filename):
 
-		#Set the defaults
-		self.startSnap = 0
-		self.endSnap = 0
-		self.Nsnaps = 0
-		self.h = 0.6751
-		self.boxsize = 0
-		self.HALOIDVAL = 1000000000000
-		self.outfilename = MTF
-		self.MassDef = ""
-		self.RDef = ""
-		self.ExtraFields = []
-		self.ExtraFieldsDtype = []
-		self.VELdir = ""
-		self.VELwalkabletreefilename = ""
-		self.WWflag = 0
-		self.AHFhalofilelist = ""
-		self.AHFtreefilelist = ""
-		self.sussingformat = 0
-		self.Rockfilelist = ""
-		self.Dtreesfilename = ""
-		self.iverbose = 0
+                #Set the defaults
+                self.startSnap = 0
+                self.endSnap = 0
+                self.Nsnaps = 0
+                self.h = 0.6751
+                self.boxsize = 0
+                self.HALOIDVAL = 1000000000000
+                self.outfilename = MTF
+                self.MassDef = ""
+                self.RDef = ""
+                self.ExtraFields = []
+                self.ExtraFieldsDtype = []
+                self.VELdir = ""
+                self.VELwalkabletreefilename = ""
+                self.WWflag = 0
+                self.AHFhalofilelist = ""
+                self.AHFtreefilelist = ""
+                self.sussingformat = 0
+                self.Rockfilelist = ""
+                self.Dtreesfilename = ""
+                self.Dtreesvols = ""
+                self.iverbose = 0
 
-		with open(filename,"r") as f:
+                with open(filename,"r") as f:
 
-			for line in f:
+                        for line in f:
 
-				if(line[0]=="#"): continue
+                                if(line[0]=="#"): continue
 
-				line = line.replace(" ","")
+                                line = line.replace(" ","")
 
-				line = line.strip()
+                                line = line.strip()
 
-				if(not line): continue
+                                if(not line): continue
 
-				line = line.split("=")
+                                line = line.split("=")
 
-				if(line[0]=="startSnap"):
-					self.startSnap = int(line[1])
+                                if(line[0]=="startSnap"):
+                                        self.startSnap = int(line[1])
 
-				elif(line[0]=="endSnap"):
-					self.endSnap = int(line[1])
+                                elif(line[0]=="endSnap"):
+                                        self.endSnap = int(line[1])
 
-				elif(line[0]=="Nsnaps"):
-					self.Nsnaps = int(line[1])
+                                elif(line[0]=="Nsnaps"):
+                                        self.Nsnaps = int(line[1])
 
-				elif(line[0]=="h"):
-					self.h = float(line[1])
+                                elif(line[0]=="h"):
+                                        self.h = float(line[1])
 
-				elif(line[0]=="boxsize"):
-					self.boxsize = float(line[1])
+                                elif(line[0]=="boxsize"):
+                                        self.boxsize = float(line[1])
 
-				elif(line[0]=="HALOIDVAL"):
-					self.HALOIDVAL = np.uint64(line[1])
+                                elif(line[0]=="HALOIDVAL"):
+                                        self.HALOIDVAL = np.uint64(line[1])
 
-				elif(line[0]=="outfilename"):
-					self.outfilename = line[1]
+                                elif(line[0]=="outfilename"):
+                                        self.outfilename = line[1]
 
-				elif(line[0]=="MassDef"):
-					self.MassDef = line[1]
+                                elif(line[0]=="MassDef"):
+                                        self.MassDef = line[1]
 
-				elif(line[0]=="RDef"):
-					self.RDef = line[1]
+                                elif(line[0]=="RDef"):
+                                        self.RDef = line[1]
 
-				elif(line[0]=="ExtraFields"):
-					if(line[1]):
-						self.ExtraFields = line[1].split(",")
+                                elif(line[0]=="ExtraFields"):
+                                        if(line[1]):
+                                                self.ExtraFields = line[1].split(",")
 
 
-				elif(line[0]=="ExtraFieldsDtype"):
-					if(line[1]):
-						self.ExtraFieldsDtype = line[1].split(",")
+                                elif(line[0]=="ExtraFieldsDtype"):
+                                        if(line[1]):
+                                                self.ExtraFieldsDtype = line[1].split(",")
 
 				# VELOCIraptor specifics
 
-				elif(line[0]=="VELdir"):
-					if(MTF=="VEL"):
-						self.VELdir = line[1]
+                                elif(line[0]=="VELdir"):
+                                        if(MTF=="VEL"):
+                                                self.VELdir = line[1]
 
-				elif(line[0]=="VELwalkabletreefilename"):
-					if(MTF=="VEL"):
-						self.VELwalkabletreefilename = line[1]
+                                elif(line[0]=="VELwalkabletreefilename"):
+                                        if(MTF=="VEL"):
+                                                self.VELwalkabletreefilename = line[1]
 
-				elif(line[0]=="WWflag"):
-					self.WWflag = int(line[1])
+                                elif(line[0]=="WWflag"):
+                                        self.WWflag = int(line[1])
 
 				# AHF specifics
 
-				elif(line[0]=="AHFhalofilelist"):
-					if(MTF=="AHF"):
-						self.AHFhalofilelist = line[1]
+                                elif(line[0]=="AHFhalofilelist"):
+                                        if(MTF=="AHF"):
+                                                self.AHFhalofilelist = line[1]
 
-				elif(line[0]=="AHFtreefilelist"):
-					if(MTF=="AHF"):
-						self.AHFtreefilelist = line[1]
+                                elif(line[0]=="AHFtreefilelist"):
+                                        if(MTF=="AHF"):
+                                                self.AHFtreefilelist = line[1]
 
-				elif(line[0]=="sussingformat"):
-					if(MTF=="AHF"):
-						self.sussingformat = int(line[1])
+                                elif(line[0]=="sussingformat"):
+                                        if(MTF=="AHF"):
+                                                self.sussingformat = int(line[1])
 
 				# Rockstar specifics
-				elif(line[0]=="Rockfilelist"):
-					if(MTF=="Rock"):
-						self.Rockfilelist = line[1]
+                                elif(line[0]=="Rockfilelist"):
+                                        if(MTF=="Rock"):
+                                                self.Rockfilelist = line[1]
 
 				# Dtrees specifics
-				elif(line[0]=="Dtreesfilename"):
-					if(MTF=="Dtrees"):
-						self.Dtreesfilename = line[1]
+                                elif(line[0]=="Dtreesfilename"):
+                                        if(MTF=="Dtrees"):
+                                                self.Dtreesfilename = line[1]
 
-				elif(line[0]=="iverbose"):
-					self.iverbose=int(line[1])
+                                elif(line[0]=="Dtreesvols"):
+                                        if(MTF=="Dtrees"):
+                                                self.Dtreesvols = line[1]
 
-				else:
-					raise OSError("Invalid config option %s, please only use the options in the sample config file" %line[0])
+                                elif(line[0]=="iverbose"):
+                                        self.iverbose=int(line[1])
+
+                                else:
+                                        raise OSError("Invalid config option %s, please only use the options in the sample config file" %line[0])

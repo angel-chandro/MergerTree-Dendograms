@@ -8,9 +8,9 @@ from cosFuncs import coshaloMvirToRvir
 
 def convDtreesToMTF(opt,snapKey,scalefactorKey,fieldsDict):
 
-	halodata,redshiftData = loadDtreesData(opt.Dtreesfilename,opt.Nsnaps,opt.endSnap,snapKey,scalefactorKey,fieldsDict)
+	halodata,redshiftData = loadDtreesData(opt.Dtreesfilename,opt.Nsnaps,opt.endSnap,snapKey,scalefactorKey,fieldsDict,opt.Dtreesvols)
 
-	treedata = convToMTF(opt.Nsnaps,halodata,fieldsDict,opt.h,opt.HALOIDVAL)
+	treedata = convToMTF(opt.Nsnaps,halodata,fieldsDict,opt.h,opt.Dtreesvols,opt.HALOIDVAL)
 
 	return treedata, redshiftData
 
@@ -63,7 +63,7 @@ def setProgenRootHeads(mainProgenSnap,mainHaloID,mainProgenIndex,BranchRootDesc,
 	return treedata
 
 
-def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
+def convToMTF(numsnaps,halodata,fieldsDict,h,vol,HALOIDVAL = 1000000000000):
         start = time.time()
         numhalos = np.zeros(numsnaps,dtype=np.int64)
         requiredFields = ["HaloID","StartProgenitor","Progenitor","Descendant","EndDescendant","Radius","Mass","Pos","HostHaloID","Redshift"]
@@ -86,10 +86,10 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
                 treedata[snapKey]["ProgenitorIndex"]= np.zeros(numhalos[snap],dtype=np.int64)
                 treedata[snapKey]["ProgenitorSnap"]= np.zeros(numhalos[snap],dtype=np.int32)
                 treedata[snapKey]["HostHaloID"] = np.zeros(numhalos[snap],dtype=np.int64)
-                halodata[snapKey]["Mass"] = halodata[snapKey]["Mass"]/h; halodata[snapKey]["Mass"] = halodata[snapKey]["Mass"]/1e10; treedata[snapKey]["Mass"] =halodata[snapKey]["Mass"].copy(); # Convert mass to 1e10*Msun/h units print('Mass:',treedata[snapKey]["Mass"])
-                treedata[snapKey]["Radius"] = coshaloMvirToRvir(halodata[snapKey]["Mass"]*1e10)/1e3 #halodata[snapKey]["Radius"] = 2*halodata[snapKey]["Radius"]/h;  treedata[snapKey]["Radius"] = halodata[snapKey]["Radius"].copy() 
+                treedata[snapKey]["Mass"] = halodata[snapKey]["Mass"]/h/1e10 # Convert mass to 1e10*Msun/h units
+                treedata[snapKey]["Radius"] = coshaloMvirToRvir(halodata[snapKey]["Mass"]/h)/1e3
+                treedata[snapKey]["Pos"] = halodata[snapKey]["Pos"]/h # Convert position to Mpc units 
 
-                halodata[snapKey]["Pos"] = halodata[snapKey]["Pos"]/h; treedata[snapKey]["Pos"] = halodata[snapKey]["Pos"].copy() 
                 # halodata[snapKey]["Pos"] = None
                 for extraField in extraFields:
                         treedata[snapKey][extraField]  = halodata[snapKey][extraField]
@@ -100,7 +100,7 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
                 sel = halodata[snapKey]["HaloID"]<1e16
                 seachoffset[snap] = np.sum(sel)
 
-                fileindex = ((halodata[snapKey]["HaloID"][sel]/1e8)%1e4).astype(np.int64); #print('fileindex:',fileindex)
+                fileindex = ((halodata[snapKey]["HaloID"][sel]/1e8)%1e4).astype(np.int64)
                 indexoffset = np.zeros(fileindex.size,dtype=np.int64)
 
                 ifileindex = 0
@@ -113,14 +113,13 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
                         indexoffset[i]+=prevcount
                         count+=1
 
-                print('indexoffset:',indexoffset)
-                print(halodata[snapKey]["HaloID"])
-                print('THEREARE',halodata[snapKey]["HaloID"].size)
-                s = np.shape(np.where(sel==True))[1]; print(s)
-                treedata[snapKey]["HaloID"][sel] = snap* HALOIDVAL + np.arange(0,s) +1#halodata[snapKey]["HaloID"][sel] - (fileindex*1e8).astype(np.int64) + indexoffset;
-                #treedata[snapKey]["HaloID"][sel] = halodata[snapKey]["HaloID"][sel] - (fileindex*1e8).astype(np.int64) + indexoffset; #print('NoI:',treedata[snapKey]["HaloID"][sel]) # there is an overlap between non-interpolated and interpolated ones: remove the +1 in non-interpolated IDs
-
-                treedata[snapKey]["HaloID"][~sel] = snap * HALOIDVAL + np.arange(s,halodata[snapKey]["HaloID"].size) +1#np.arange(seachoffset[snap],halodata[snapKey]["HaloID"].size) +1; #print('I:',treedata[snapKey]["HaloID"][~sel])
+                if vol=="all":
+                        treedata[snapKey]["HaloID"][sel] = halodata[snapKey]["HaloID"][sel] - (fileindex*1e8).astype(np.int64) + indexoffset # ANGEL: there is an overlap between non-interpolated and interpolated ones: remove the +1 in non-interpolated IDs
+                        treedata[snapKey]["HaloID"][~sel] = snap * HALOIDVAL + np.arange(seachoffset[snap],halodata[snapKey]["HaloID"].size) +1 # ANGEL: here +1 is necessary to offset the interpolated values
+                elif vol=="one":
+                        s = np.shape(np.where(sel==True))[1] # SUBVOLUME
+                        treedata[snapKey]["HaloID"][sel] = snap* HALOIDVAL + np.arange(0,s) +1 # SUBVOLUME
+                        treedata[snapKey]["HaloID"][~sel] = snap * HALOIDVAL + np.arange(s,halodata[snapKey]["HaloID"].size) +1 # SUBVOLUME
 
 		#Change the host halo ID for interpolated hosts
 		# haloiddict[snapKey] = dict(zip(halodata[snapKey]["HaloID"][~sel],treedata[snapKey]["HaloID"][~sel]))
@@ -143,7 +142,7 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
 
                 snapKey = "Snap_%03d" %snap
 
-                haloDict = dict(zip(halodata[snapKey]["HaloID"],treedata[snapKey]["HaloID"]))#; print('Dict:',haloDict)
+                haloDict = dict(zip(halodata[snapKey]["HaloID"],treedata[snapKey]["HaloID"]))
 
                 if(snap>0):
                         nextSnapKey = "Snap_%03d" %(snap-1)
@@ -155,14 +154,12 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
 
                                 for idx,ihalo in zip(indexes,halodata[nextSnapKey]["Descendant"][indexes]):
 					#print(idx,ihalo,haloDict[ihalo])
-                                        print('idx:',idx); print('ihalo:',ihalo); print('haloDict[ihalo]:',haloDict[ihalo])
-                                        treedata[nextSnapKey]["Descendant"][idx] = haloDict[ihalo]; #print('idx:',idx); print('ihalo:',ihalo); print('haloDict[ihalo]:',haloDict[ihalo])
-                                        # look for the descendant index in the reduced catalogue
-                                        print(treedata[snapKey]["HaloID"])
-                                        print(treedata[nextSnapKey]["Descendant"][idx])
-                                        print('Hereare:',np.where(treedata[snapKey]["HaloID"]==treedata[nextSnapKey]["Descendant"][idx])[0])
-                                        treedata[nextSnapKey]["DescendantIndex"][idx] = np.where(treedata[snapKey]["HaloID"]==treedata[nextSnapKey]["Descendant"][idx])[0]
-                                        #treedata[nextSnapKey]["DescendantIndex"][idx] = int(haloDict[ihalo]%HALOIDVAL-1); #print('Check:',treedata[nextSnapKey]["DescendantIndex"][idx])
+                                        treedata[nextSnapKey]["Descendant"][idx] = haloDict[ihalo]
+                                        if vol=="all":
+                                                treedata[nextSnapKey]["DescendantIndex"][idx] = int(haloDict[ihalo]%HALOIDVAL-1) # where to find the descendant halo in the next halo catalogue
+                                        elif vol=="one":
+                                                # look for the descendant index in the reduced catalogue
+                                                treedata[nextSnapKey]["DescendantIndex"][idx] = np.where(treedata[snapKey]["HaloID"]==treedata[nextSnapKey]["Descendant"][idx])[0] # SUBVOLUME
 
                         treedata[nextSnapKey]["DescendantSnap"] = halodata[nextSnapKey]["DescendantSnap"]
 
@@ -270,32 +267,32 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
                 start2=time.time()
                 if (numhalos[isnap] == 0): continue
                 #set Progenitors and root Progenitors if necessary
-                indices = np.where(treedata[currSnapKey]['Progenitor'] == 0)[0]
+                indices = np.where(treedata[currSnapKey]['Progenitor'] == 0)[0] # if progenitor is 0, then it doesn't have progenitor (it's root progenitor)
                 numareStartProgenitors = indices.size
 
                 if (numareStartProgenitors > 0):
                         treedata[currSnapKey]['Progenitor'][indices] = np.array(treedata[currSnapKey]['HaloID'][indices],copy=True)
-                        treedata[currSnapKey]['StartProgenitor'][indices] = np.array(treedata[currSnapKey]['HaloID'][indices],copy=True)
+                        treedata[currSnapKey]['StartProgenitor'][indices] = np.array(treedata[currSnapKey]['HaloID'][indices],copy=True) # set progenitor and root progenitor as the same ID
                         treedata[currSnapKey]['ProgenitorSnap'][indices] = isnap*np.ones(indices.size, dtype=np.int32)
                         treedata[currSnapKey]['ProgenitorIndex'][indices] = np.array(indices,dtype=np.int64,copy=True)
 
-                descencheck = treedata[currSnapKey]["Descendant"]!=-1; print(descencheck)
-                indices = np.where(~descencheck)[0]
+                descencheck = treedata[currSnapKey]["Descendant"]!=-1
+                indices = np.where(~descencheck)[0] # where descendants are -1
 
 		#find all halos that have descendants and set there heads
                 if (indices.size):
                         treedata[currSnapKey]["Descendant"][indices] = np.array(treedata[currSnapKey]["HaloID"][indices],copy=True)
                         treedata[currSnapKey]["DescendantSnap"][indices] = isnap
                         treedata[currSnapKey]["DescendantIndex"][indices] = indices
-                        treedata[currSnapKey]["EndDescendant"][indices] = np.array(treedata[currSnapKey]["HaloID"][indices],copy=True)
+                        treedata[currSnapKey]["EndDescendant"][indices] = np.array(treedata[currSnapKey]["HaloID"][indices],copy=True) # descendants (end descendant) -1 at z!=0, set equal to IDs
 
 
-                indices=np.where(descencheck)[0]; print(indices)
+                indices=np.where(descencheck)[0] # halos with descendants
                 numwithdescen = indices.size
 
                 if (numwithdescen>0):
 
-                        interpdescen = np.where(treedata[currSnapKey]["Descendant"]>1e16)[0]; #print('Int:',interpdescen)
+                        interpdescen = np.where(treedata[currSnapKey]["Descendant"]>1e16)[0] # there are no interp IDs now, so this is 0
                         descSnap = isnap + 1
                         descSnapKey = "Snap_%03d" %descSnap
 
@@ -304,19 +301,19 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
                         for indx in interpdescen:
                                 treedata[currSnapKey]["Descendant"][indx] = haloiddict[descSnapKey][halodata[currSnapKey]["Descendant"][indx]]
 
-                        treedata[currSnapKey]["DescendantIndex"][interpdescen] = (treedata[currSnapKey]["Descendant"][interpdescen]%(HALOIDVAL/1e4)).astype(np.int64); #print((treedata[currSnapKey]["Descendant"][interpdescen]%(HALOIDVAL/1e4)).astype(np.int64))
+                        treedata[currSnapKey]["DescendantIndex"][interpdescen] = (treedata[currSnapKey]["Descendant"][interpdescen]%(HALOIDVAL/1e4)).astype(np.int64) # not doing this either
 
 			# set the Progenitors of all these objects and their root Progenitors as well
                         indices2 = np.where(halodata[currSnapKey]["isMainProgenitor"][indices]==1)[0]
                         numactive = indices2.size
                         if (numactive>0):
-                                activeProgenitors = indices[indices2]#; print('1:',indices[indices2]); print('2:',treedata[currSnapKey]["DescendantIndex"][indices]); print('3:',indices2); print('4:',indices)
-                                descenindex = treedata[currSnapKey]["DescendantIndex"][indices[indices2]]#; print('descSnapKey:',descSnapKey); print('descenindex:',descenindex); print(treedata[descSnapKey]['Progenitor']); print(np.shape(treedata[descSnapKey]['Progenitor'])); #print(np.shape(treedata[currSnapKey]['HaloID']))
+                                activeProgenitors = indices[indices2] # main progenitor indexes on the whole catalogue
+                                descenindex = treedata[currSnapKey]["DescendantIndex"][indices[indices2]] # descendant indexes of these main progenitors (where the descendant is in the next snap)
                                 
-                                treedata[descSnapKey]['Progenitor'][descenindex] = treedata[currSnapKey]['HaloID'][activeProgenitors]
-                                treedata[descSnapKey]['StartProgenitor'][descenindex] = treedata[currSnapKey]['StartProgenitor'][activeProgenitors]
+                                treedata[descSnapKey]['Progenitor'][descenindex] = treedata[currSnapKey]['HaloID'][activeProgenitors] # setting the progenitor when it is main progenitor
+                                treedata[descSnapKey]['StartProgenitor'][descenindex] = treedata[currSnapKey]['StartProgenitor'][activeProgenitors] # root progenitor copy
                                 treedata[descSnapKey]['ProgenitorSnap'][descenindex] = isnap
-                                treedata[descSnapKey]['ProgenitorIndex'][descenindex] = activeProgenitors
+                                treedata[descSnapKey]['ProgenitorIndex'][descenindex] = activeProgenitors # main progenitor ID
 
                 print("Done snap",isnap,"in",time.time()-start2)
 
@@ -365,19 +362,19 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
                 if (numhalos[isnap] == 0):
                         continue
                 snapKey = "Snap_%03d" %isnap
-                indices = np.where((treedata[snapKey]['EndDescendant'] != 0) & (treedata[snapKey]["Progenitor"]!=treedata[snapKey]["HaloID"]))[0]
+                indices = np.where((treedata[snapKey]['EndDescendant'] != 0) & (treedata[snapKey]["Progenitor"]!=treedata[snapKey]["HaloID"]))[0] # when the halo is an end descendant, and not an root \progenitor (more than 1 snap alive)
                 numactive=indices.size
 
                 if (numactive == 0):
                         continue
 
-                progenindexarray = treedata[snapKey]['ProgenitorIndex'][indices]
+                progenindexarray = treedata[snapKey]['ProgenitorIndex'][indices] # save progenitor indexes
 
 
                 progensnap = isnap -1
                 progenSnapKey = "Snap_%03d" %progensnap
                 # go to root Progenitors and walk the main branch
-                treedata[progenSnapKey]['EndDescendant'][progenindexarray]=treedata[snapKey]['EndDescendant'][indices]
+                treedata[progenSnapKey]['EndDescendant'][progenindexarray]=treedata[snapKey]['EndDescendant'][indices] # save end descendant to main progenitors (main branch definition)
 	# print("Done 1 in", time.time()-start)
 	# start = time.time()
 
@@ -426,7 +423,7 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
                         continue
                 # identify all haloes which are not primary progenitors of their descendants, having a descendant rank >0
                 snapKey = "Snap_%03d" %isnap
-                indices = np.where(treedata[snapKey]['EndDescendant'] == 0)[0]
+                indices = np.where(treedata[snapKey]['EndDescendant'] == 0)[0] # halos not yet assigned an end descendant (not main branch)
                 numactive = indices.size
                 if (numactive == 0):
                         continue
@@ -436,22 +433,25 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,HALOIDVAL = 1000000000000):
                 maindescenindex = treedata[snapKey]["DescendantIndex"][indices]
 
                 maindescensnap = isnap+1
-                descSnapKey = "Snap_%03d" %maindescensnap; #print('1:',maindescenindex); print('2:',indices); print(treedata[snapKey]["EndDescendant"]); print(treedata[descSnapKey]['EndDescendant'])
+                descSnapKey = "Snap_%03d" %maindescensnap
 
 
-                treedata[snapKey]["EndDescendant"][indices] = treedata[descSnapKey]['EndDescendant'][maindescenindex]
+                treedata[snapKey]["EndDescendant"][indices] = treedata[descSnapKey]['EndDescendant'][maindescenindex] # halos that end in another halo, not in an descendant (it doesn't have descendant\ on the sim). We set their end descendant as the end descendant of the halo in which they end
 
 
         print("Done setting the EndDescendants in",time.time()-start)
 
         return treedata
 
-def loadDtreesData(basefilename,numsnaps,endsnap,snapKey,scalefactorKey,dataKeys):
+def loadDtreesData(basefilename,numsnaps,endsnap,snapKey,scalefactorKey,dataKeys,vol):
 
         #Lets find out how many subvolumes there are and the datatype of each field
         filename = basefilename + ".0.hdf5"
         hdffile = h5py.File(filename,"r")
-        nfiles = 1 #hdffile["fileInfo"].attrs["numberOfFiles"][...]
+        if vol=="all": 
+                nfiles = hdffile["fileInfo"].attrs["numberOfFiles"][...]
+        elif vol=="one":
+                nfiles = 1 # SUBVOLUME
         fielddatatypes = {datakey:hdffile[dataKeys[datakey]].dtype for datakey in dataKeys.keys()}
         hdffile.close()
         
@@ -467,7 +467,7 @@ def loadDtreesData(basefilename,numsnaps,endsnap,snapKey,scalefactorKey,dataKeys
                 redshiftData = np.concatenate([pad,redshiftData])
 
 		#Extract the number of haloes  
-                numhalospersubvol[ivol] = hdffile["haloTrees/nodeIndex"].size; #descID = np.array(hdffile["haloTrees/descendantIndex"][()],dtype='int64'); haloID = np.array(hdffile["haloTrees/nodeIndex"][()],dtype='int64'); print('1:',np.where(haloID==10197000000043139)); print('2:',np.where(descID==10197000000043139)); print('Total halos:',haloID.size); ind1 = np.where(descID==-1); print("Descendants=-1:",ind1[0]); ind2 = np.isin(descID,haloID); print(ind2); h2 = np.where(ind2==True); print('HERE',h2[0]); indT = np.sort(np.concatenate((ind1[0],h2[0]))); print(indT); print(indT.size); print('3:',np.where(indT==73349)); print('4:',haloID[73349]); numhalospersubvol[ivol] = indT.size
+                numhalospersubvol[ivol] = hdffile["haloTrees/nodeIndex"].size
                 hdffile.close()
 
         totnhalos = np.sum(numhalospersubvol,dtype=np.uint64) 
@@ -542,25 +542,25 @@ def loadDtreesData(basefilename,numsnaps,endsnap,snapKey,scalefactorKey,dataKeys
 	#Sort all the datasets so they are in HaloID order
         for snap in range(minsnap,numsnaps):
 
-                snapKey = "Snap_%03d" %snap; print(snapKey)
+                snapKey = "Snap_%03d" %snap
 
 
-                sortIndx = np.argsort(halodata[snapKey]["HaloID"]); print(sortIndx.size)
+                sortIndx = np.argsort(halodata[snapKey]["HaloID"])
                 
                 for dataKey in dataKeys.keys():
                         halodata[snapKey][dataKey] = halodata[snapKey][dataKey][sortIndx]
 
-                # not all the files: set descID==-1 when the descendant is in anther file
-                if snap<endsnap:
+                if vol=="one":
+                        # SUBVOLUME: not all the files, so set descID==-1 when the descendant is in another file
+                        if snap<endsnap:
 
-                        descsnapKey = "Snap_%03d" %(snap+1); print('desc:',descsnapKey)
-
-                        haloID = halodata[descsnapKey]["HaloID"]
-                        descID = halodata[snapKey]["Descendant"]
-                        indT = np.isin(descID,haloID)
-                        print('indT:',indT)
-                        ind = np.where(indT==False)
-                        halodata[snapKey]["Descendant"][ind] = -1
+                                descsnapKey = "Snap_%03d" %(snap+1)
+                                
+                                haloID = halodata[descsnapKey]["HaloID"]
+                                descID = halodata[snapKey]["Descendant"]
+                                indT = np.isin(descID,haloID)
+                                ind = np.where(indT==False)
+                                halodata[snapKey]["Descendant"][ind] = -1
                 
         return halodata,redshiftData
 

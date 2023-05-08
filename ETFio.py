@@ -20,74 +20,75 @@ def WriteETFCatalogue(format,opt,treedata,Redshift,fieldsDict):
 	####################################################################################
 
 
-	filename = opt.outfilename+ ".ETF.tree.hdf"
-	print("Writing ETF catalogue to ",filename)
+        filename = opt.outfilename+ ".ETF.tree.hdf"
+        print("Writing ETF catalogue to ",filename)
 
 
-	hdffile = h5py.File(filename,"w")
+        hdffile = h5py.File(filename,"w")
 
 	#Create the header
-	headergroup = hdffile.create_group("Header")
+        headergroup = hdffile.create_group("Header")
 
 	#Add the options form the config into the header
-	headergroup.attrs["startSnap"] = opt.startSnap
-	headergroup.attrs["endSnap"] = opt.endSnap
-	headergroup.attrs["Nsnaps"] = opt.Nsnaps
-	headergroup.attrs["h"] = opt.h
-	headergroup.attrs["boxsize"] = opt.boxsize
-	headergroup.attrs["HALOIDVAL"] = opt.HALOIDVAL
-	headergroup.attrs["Munit"] = "10^10 solarmasses"
-	headergroup.attrs["Lunit"] = "Mpc"
-	headergroup.attrs["Vunit"] = "km/s"
+        headergroup.attrs["startSnap"] = opt.startSnap
+        headergroup.attrs["endSnap"] = opt.endSnap
+        headergroup.attrs["Nsnaps"] = opt.Nsnaps
+        headergroup.attrs["h"] = opt.h
+        headergroup.attrs["boxsize"] = opt.boxsize
+        headergroup.attrs["HALOIDVAL"] = opt.HALOIDVAL
+        headergroup.attrs["Munit"] = "10^10 solarmasses"
+        headergroup.attrs["Lunit"] = "Mpc"
+        headergroup.attrs["Vunit"] = "km/s"
 
 	#Add to the header which file the data is from
-	if(format=="VEL"):
+        if(format=="VEL"):
 
-		headergroup.attrs["VELdir"] = opt.VELdir
-		headergroup.attrs["VELwalkabletreefilename"] = opt.VELwalkabletreefilename
-		headergroup.attrs["WWflag"] = opt.WWflag
+                headergroup.attrs["VELdir"] = opt.VELdir
+                headergroup.attrs["VELwalkabletreefilename"] = opt.VELwalkabletreefilename
+                headergroup.attrs["WWflag"] = opt.WWflag
 
-	elif(format=="AHF"):
+        elif(format=="AHF"):
 
-		headergroup.attrs["AHFhalofilelist"] = opt.AHFhalofilelist
-		headergroup.attrs["AHFtreefilelist"] = opt.AHFtreefilelist
+                headergroup.attrs["AHFhalofilelist"] = opt.AHFhalofilelist
+                headergroup.attrs["AHFtreefilelist"] = opt.AHFtreefilelist
 
-	elif(format=="Rock"):
+        elif(format=="Rock"):
 
-		headergroup.attrs["Rockfilelist"] = opt.Rockfilelist
+                headergroup.attrs["Rockfilelist"] = opt.Rockfilelist
 
-	elif(format=="Dtrees"):
+        elif(format=="Dtrees"):
 
-		headergroup.attrs["Dtreesfilename"] = opt.Dtreesfilename
+                headergroup.attrs["Dtreesfilename"] = opt.Dtreesfilename
+                headergroup.attrs["Dtreesvols"] = opt.Dtreesvols
+                
+        #Create a snapshot group
+        for snap in range(opt.startSnap,opt.endSnap+1):
 
-	#Create a snapshot group
-	for snap in range(opt.startSnap,opt.endSnap+1):
+                snapKey = "Snap_%03d" %snap
 
-		snapKey = "Snap_%03d" %snap
+                isnap = snap - opt.startSnap
 
-		isnap = snap - opt.startSnap
+                snapgroup = hdffile.create_group("Snap_%03d" %(snap))
 
-		snapgroup = hdffile.create_group("Snap_%03d" %(snap))
+                snapgroup.attrs["Redshift"] = Redshift[isnap]
 
-		snapgroup.attrs["Redshift"] = Redshift[isnap]
+                #Put all the data in the snapshot group.
+                for key in treedata[snapKey].keys():
 
-		#Put all the data in the snapshot group.
-		for key in treedata[snapKey].keys():
+                        if("/haloTrees/" in key):
+                                datasetKey = key.replace("/haloTrees/","")
+                        else:
+                                datasetKey = key
 
-			if("/haloTrees/" in key):
-				datasetKey = key.replace("/haloTrees/","")
-			else:
-				datasetKey = key
-
-			dataset = snapgroup.create_dataset(datasetKey,data =treedata[snapKey][key])
+                        dataset = snapgroup.create_dataset(datasetKey,data =treedata[snapKey][key])
 
 			#Add an attribute to the dataset which gives the dataset's orginal name in the catalogue
-			if((format=="VEL") | (format=="Dtrees")):
-				dataset.attrs["origFieldName"] = fieldsDict[key]
-			else:
-				dataset.attrs["origFieldName"] = fieldsDict[key][0]
+                        if((format=="VEL") | (format=="Dtrees")):
+                                dataset.attrs["origFieldName"] = fieldsDict[key]
+                        else:
+                                dataset.attrs["origFieldName"] = fieldsDict[key][0]
 
-	hdffile.close()
+        hdffile.close()
 
 
 # This is the class which contains all the simulation info
@@ -195,7 +196,7 @@ def LoadETFCatalogue(filename,plotOpt):
 					colDataKey= "Radius"
 
 		else:
-			print("Setting the HostHaloID as the colour, please set plotColorBar = 1 in plot_config.cfg if you would like a different dataset to be used"); print('HOST')
+			print("Setting the HostHaloID as the colour, please set plotColorBar = 1 in plot_config.cfg if you would like a different dataset to be used")
 			colDataKey= "HostHaloID"
 
 		if((plotOpt.plotColorBar==0) & (colDataKey!="HostHaloID")):
@@ -257,7 +258,7 @@ def LoadETFCatalogue(filename,plotOpt):
 					treedata[snapKey][key] = np.array(hdffile[snapKey][key])
 
 		treedata[snapKey]["SizeData"] = np.array(hdffile[snapKey][sizeDataKey])
-		treedata[snapKey]["ColData"] = np.array(hdffile[snapKey][colDataKey]); #print('treedata[snapKey]["ColData"]:',treedata[snapKey]["ColData"])
+		treedata[snapKey]["ColData"] = np.array(hdffile[snapKey][colDataKey])
 		if(plotOpt.overplotdata):
 			treedata[snapKey]["OverPlotData"] = np.array(hdffile[snapKey][overDataKey]) 
 		
