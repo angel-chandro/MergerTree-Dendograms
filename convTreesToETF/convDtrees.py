@@ -362,13 +362,13 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,vol,HALOIDVAL = 1000000000000):
                 if (numhalos[isnap] == 0):
                         continue
                 snapKey = "Snap_%03d" %isnap
-                indices = np.where((treedata[snapKey]['EndDescendant'] != 0) & (treedata[snapKey]["Progenitor"]!=treedata[snapKey]["HaloID"]))[0] # when the halo is an end descendant, and not an root \progenitor (more than 1 snap alive)
+                indices = np.where((treedata[snapKey]['EndDescendant'] != 0) & (treedata[snapKey]["Progenitor"]!=treedata[snapKey]["HaloID"]))[0] # when the halo is an end descendant, and not a root progenitor (more than 1 snap alive)
                 numactive=indices.size
 
                 if (numactive == 0):
                         continue
 
-                progenindexarray = treedata[snapKey]['ProgenitorIndex'][indices] # save progenitor indexes
+                progenindexarray = treedata[snapKey]['ProgenitorIndex'][indices] # save main progenitor indexes
 
 
                 progensnap = isnap -1
@@ -436,7 +436,7 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,vol,HALOIDVAL = 1000000000000):
                 descSnapKey = "Snap_%03d" %maindescensnap
 
 
-                treedata[snapKey]["EndDescendant"][indices] = treedata[descSnapKey]['EndDescendant'][maindescenindex] # halos that end in another halo, not in an descendant (it doesn't have descendant\ on the sim). We set their end descendant as the end descendant of the halo in which they end
+                treedata[snapKey]["EndDescendant"][indices] = treedata[descSnapKey]['EndDescendant'][maindescenindex] # halos that end in another halo, not in an descendant (it doesn't have descendant on the sim). We set their end descendant as the end descendant of the halo in which they end
 
 
         print("Done setting the EndDescendants in",time.time()-start)
@@ -452,6 +452,9 @@ def loadDtreesData(basefilename,numsnaps,endsnap,snapKey,scalefactorKey,dataKeys
                 nfiles = hdffile["fileInfo"].attrs["numberOfFiles"][...]
         elif vol=="one":
                 nfiles = 1 # SUBVOLUME
+        #elif vol=="subvol":
+                #vols = np.linspace(subvol.split("-")[0],subvol.split("-")[1]+1,1)
+                #nfiles = np.shape(vols) # SUBVOLUME
         fielddatatypes = {datakey:hdffile[dataKeys[datakey]].dtype for datakey in dataKeys.keys()}
         hdffile.close()
         

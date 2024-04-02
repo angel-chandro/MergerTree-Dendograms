@@ -7,146 +7,158 @@ class plotOptions(object):
 	def __init__(self,filename,outdir):
 
 		#Lets set the defaults
-		self.outdir = outdir
-		self.maxNumBranches = 20
-		self.maxdepth = 2
-		self.plotSubhaloBranches = 1
-		self.minNsnapsExist = 10
-		self.showBranchTypeLabel = 1
-		self.sizeLabel = "M$_{\rm vir}$"
-		self.sizeUnit = "10$^{10}$ M$_{\odot}$"
-		self.maxSizeFontSize = 24
-		self.maxSizeFormat = "%.2f"
-		self.maxSizeFontDist = 10
-		self.logged = 0
-		self.subBranchSizeFactor = 1.0
-		self.plotNumRvir = 2.5
-		self.xLabel = "R$_{\rm#orbit}$/R$_{\rm#vir,parent}$"
-		self.marker = "line"
-		self.numSubplotsMain = 4
-		self.plotColorBar = 0
-		self.colMap = "winter"
-		self.cbarLabel="R$_{\rm vir}$#[Mpc]"
-		self.fileDesc = "dend"
-		self.snapoffset = 0
-		self.overplotdata = 0
-		self.insetPlot = 1
-		self.WWflag = 0
-		self.promptFlag = 1
-		self.markerSizeDataset = "Mass"
-		self.orderDataset = "Mass"
-		self.markerColorDataset = "Radius"
-		self.overplotDataset = "HaloID"
-		self.nplot = 100
+                self.outdir = outdir
+                self.maxNumBranches = 20
+                self.maxdepth = 2
+                self.plotSubhaloBranches = 1
+                self.minNsnapsExist = 10
+                self.showBranchTypeLabel = 1
+                self.sizeLabel = "M$_{\rm vir}$"
+                self.sizeUnit = "10$^{10}$ M$_{\odot}$"
+                self.maxSizeFontSize = 24
+                self.maxSizeFormat = "%.2f"
+                self.maxSizeFontDist = 10
+                self.logged = 0
+                self.subBranchSizeFactor = 1.0
+                self.plotNumRvir = 2.5
+                self.xLabel = "R$_{\rm#orbit}$/R$_{\rm#vir,parent}$"
+                self.marker = "line"
+                self.numSubplotsMain = 4
+                self.plotColorBar = 0
+                self.colMap = "winter"
+                self.cbarLabel="R$_{\rm vir}$#[Mpc]"
+                self.fileDesc = "dend"
+                self.snapoffset = 0
+                self.overplotdata = 0
+                self.insetPlot = 1
+                self.WWflag = 0
+                self.promptFlag = 1
+                self.markerSizeDataset = "Mass"
+                self.orderDataset = "Mass"
+                self.binDataset = ""
+                self.lowBin = ""
+                self.upBin = ""
+                self.markerColorDataset = "Radius"
+                self.overplotDataset = "HaloID"
+                self.nplot = 100
 
-		with open(filename,"r") as f:
+                with open(filename,"r") as f:
 
-			for line in f:
+                        for line in f:
 
-				if((line[0]=="#") | (line[0]=="!")): continue
+                                if((line[0]=="#") | (line[0]=="!")): continue
 
-				line = line.replace(" ","")
+                                line = line.replace(" ","")
 
-				line = line.strip()
+                                line = line.strip()
 
-				if(not line): continue
+                                if(not line): continue
 
-				line = line.split("=")
-
-
-				if(line[0]=="maxNumBranches"):
-					self.maxNumBranches = int(line[1])
-
-				elif(line[0]=="maxdepth"):
-					self.maxdepth = int(line[1])
-
-				elif(line[0]=="plotSubhaloBranches"):
-					self.plotSubhaloBranches = int(line[1])
-
-				elif(line[0]=="minNsnapsExist"):
-					self.minNsnapsExist = int(line[1])
-
-				elif(line[0]=="showBranchTypeLabel"):
-					self.showBranchTypeLabel = int(line[1])
-
-				elif(line[0]=="sizeLabel"):
-					self.sizeLabel = line[1].replace("#"," ")
-
-				elif(line[0]=="sizeUnit"):
-					self.sizeUnit = line[1].replace("#"," ")
-
-				elif(line[0]=="maxSizeFormat"):
-					self.maxSizeFormat = line[1]
-
-				elif(line[0]=="maxSizeFontSize"):
-					self.maxSizeFontSize = int(line[1])
-
-				elif(line[0]=="maxSizeFontDist"):
-					self.maxSizeFontDist = int(line[1])
-
-				elif(line[0]=="logged"):
-					self.logged = int(line[1])
-
-				elif(line[0]=="subBranchSizeFactor"):
-					self.subBranchSizeFactor = float(line[1])
-
-				elif(line[0]=="plotNumRvir"):
-					self.plotNumRvir = float(line[1])
-
-				elif(line[0]=="xLabel"):
-					self.xLabel = line[1].replace("#"," ")
-
-				elif(line[0]=="marker"):
-					self.marker = line[1]
-
-				elif(line[0]=="numSubplotsMain"):
-					self.numSubplotsMain = int(line[1])
-
-				elif(line[0]=="plotColorBar"):
-					self.plotColorBar = int(line[1])
-
-				elif(line[0]=="colMap"):
-					self.colMap = line[1]
-
-				elif(line[0]=="cbarLabel"):
-					self.cbarLabel = line[1].replace("#"," ")
-
-				elif(line[0]=="fileDesc"):
-					self.fileDesc = line[1]
-
-				elif(line[0]=="snapoffset"):
-					self.snapoffset = int(line[1])
-
-				elif(line[0]=="overplotdata"):
-					self.overplotdata = int(line[1])
-
-				elif(line[0]=="overplotFormat"):
-					self.overplotFormat = line[1]
-
-				elif(line[0]=="insetPlot"):
-					self.insetPlot = int(line[1])
-
-				elif(line[0]=="WWflag"):
-					self.WWflag = int(line[1])
+                                line = line.split("=")
 
 
-				elif(line[0]=="promptFlag"):
-					self.promptFlag = int(line[1])
+                                if(line[0]=="maxNumBranches"):
+                                        self.maxNumBranches = int(line[1])
 
-				elif(line[0]=="markerSizeDataset"):
-					self.markerSizeDataset = line[1]
+                                elif(line[0]=="maxdepth"):
+                                        self.maxdepth = int(line[1])
 
-				elif(line[0]=="orderDataset"):
-					self.orderDataset = line[1]
+                                elif(line[0]=="plotSubhaloBranches"):
+                                        self.plotSubhaloBranches = int(line[1])
 
-				elif(line[0]=="markerColorDataset"):
-					self.markerColorDataset = line[1]
+                                elif(line[0]=="minNsnapsExist"):
+                                        self.minNsnapsExist = int(line[1])
 
-				elif(line[0]=="overplotDataset"):
-					self.overplotDataset = line[1]
+                                elif(line[0]=="showBranchTypeLabel"):
+                                        self.showBranchTypeLabel = int(line[1])
 
-				else:
-					raise OSError("Invalid config option %s, please only use the options in the sample config file" %line[0])
+                                elif(line[0]=="sizeLabel"):
+                                        self.sizeLabel = line[1].replace("#"," ")
+
+                                elif(line[0]=="sizeUnit"):
+                                        self.sizeUnit = line[1].replace("#"," ")
+
+                                elif(line[0]=="maxSizeFormat"):
+                                        self.maxSizeFormat = line[1]
+
+                                elif(line[0]=="maxSizeFontSize"):
+                                        self.maxSizeFontSize = int(line[1])
+
+                                elif(line[0]=="maxSizeFontDist"):
+                                        self.maxSizeFontDist = int(line[1])
+
+                                elif(line[0]=="logged"):
+                                        self.logged = int(line[1])
+
+                                elif(line[0]=="subBranchSizeFactor"):
+                                        self.subBranchSizeFactor = float(line[1])
+
+                                elif(line[0]=="plotNumRvir"):
+                                        self.plotNumRvir = float(line[1])
+
+                                elif(line[0]=="xLabel"):
+                                        self.xLabel = line[1].replace("#"," ")
+
+                                elif(line[0]=="marker"):
+                                        self.marker = line[1]
+
+                                elif(line[0]=="numSubplotsMain"):
+                                        self.numSubplotsMain = int(line[1])
+
+                                elif(line[0]=="plotColorBar"):
+                                        self.plotColorBar = int(line[1])
+
+                                elif(line[0]=="colMap"):
+                                        self.colMap = line[1]
+
+                                elif(line[0]=="cbarLabel"):
+                                        self.cbarLabel = line[1].replace("#"," ")
+
+                                elif(line[0]=="fileDesc"):
+                                        self.fileDesc = line[1]
+
+                                elif(line[0]=="snapoffset"):
+                                        self.snapoffset = int(line[1])
+
+                                elif(line[0]=="overplotdata"):
+                                        self.overplotdata = int(line[1])
+
+                                elif(line[0]=="overplotFormat"):
+                                        self.overplotFormat = line[1]
+
+                                elif(line[0]=="insetPlot"):
+                                        self.insetPlot = int(line[1])
+
+                                elif(line[0]=="WWflag"):
+                                        self.WWflag = int(line[1])
+
+
+                                elif(line[0]=="promptFlag"):
+                                        self.promptFlag = int(line[1])
+
+                                elif(line[0]=="markerSizeDataset"):
+                                        self.markerSizeDataset = line[1]
+
+                                elif(line[0]=="orderDataset"):
+                                        self.orderDataset = line[1]
+
+                                elif(line[0]=="binDataset"):
+                                        self.binDataset = line[1]
+
+                                elif(line[0]=="lowBin"):
+                                        self.lowBin = float(line[1])
+
+                                elif(line[0]=="upBin"):
+                                        self.upBin = float(line[1])
+
+                                elif(line[0]=="markerColorDataset"):
+                                        self.markerColorDataset = line[1]
+
+                                elif(line[0]=="overplotDataset"):
+                                        self.overplotDataset = line[1]
+
+                                else:
+                                        raise OSError("Invalid config option %s, please only use the options in the sample config file" %line[0])
 
 
 class ETFoptions(object):
