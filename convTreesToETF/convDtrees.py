@@ -452,9 +452,6 @@ def loadDtreesData(basefilename,numsnaps,endsnap,snapKey,scalefactorKey,dataKeys
                 nfiles = hdffile["fileInfo"].attrs["numberOfFiles"][...]
         elif vol=="one":
                 nfiles = 1 # SUBVOLUME
-        #elif vol=="subvol":
-                #vols = np.linspace(subvol.split("-")[0],subvol.split("-")[1]+1,1)
-                #nfiles = np.shape(vols) # SUBVOLUME
         fielddatatypes = {datakey:hdffile[dataKeys[datakey]].dtype for datakey in dataKeys.keys()}
         hdffile.close()
         
