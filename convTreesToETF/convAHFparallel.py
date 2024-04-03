@@ -1,3 +1,11 @@
+#
+# Code to convert AHF halo catalog and tree into ETF
+#
+# Developed by: Rhys Poulton and Alexander Knebe
+#
+
+
+
 import numpy as np
 import sys
 import h5py
@@ -7,31 +15,32 @@ import array
 from functools import partial
 
 
-def convAHFToMTF(startSnap,endSnap,haloFilelist,treeFilelist,fieldsDict):
+def convAHFToMTF(opt,fieldsDict):
 
-	numsnaps = endSnap - startSnap +1
+	numsnaps = opt.endSnap - opt.startSnap +1
 
-	Redshift,halodata = ReadInHaloFilesAcrossSnapshots(startSnap,endSnap,haloFilelist,fieldsDict)
+	Redshift,halodata = ReadInHaloFilesAcrossSnapshots(opt,fieldsDict)
 
-	treedata = ReadHaloMergerTreeAcrossSnapshots(startSnap,endSnap,treeFilelist)
+	if(opt.sussingformat): treedata = ReadHaloMergerTreeAcrossSnapshots_SussingFormat(opt,halodata)
+	else: treedata = ReadHaloMergerTreeAcrossSnapshots(opt)
 
-	halodata = convToMTF(startSnap,endSnap,halodata,treedata)
+	halodata = convToMTF(opt,halodata,treedata)
 
 	return Redshift,halodata
 
 
-def ReadInHaloFilesAcrossSnapshots(startSnap,endSnap,filelist,fieldsDict):
+def ReadInHaloFilesAcrossSnapshots(opt,fieldsDict):
 	"""
 	Function to read in the AHF halo data across many files
 
 	"""
 
-	numsnaps = abs(endSnap - startSnap + 1)
+	numsnaps = abs(opt.endSnap - opt.startSnap + 1)
 
 	fields = list(fieldsDict.values())
 
-	snapfilelist=open(filelist,"r")
-	start=time.clock()  
+	snapfilelist=open(opt.AHFhalofilelist,"r")
+	start=time.clock()
 	halodata={}
 
 
@@ -64,20 +73,20 @@ def ReadInHaloFilesAcrossSnapshots(startSnap,endSnap,filelist,fieldsDict):
 
 	snapfilelist.close()
 
-	snapfilelist=open(filelist,"r")
+	snapfilelist=open(opt.AHFhalofilelist,"r")
 
-	Redshift = np.zeros(endSnap-startSnap+1,dtype=float)
+	Redshift = np.zeros(opt.endSnap-opt.startSnap+1,dtype=float)
 
-	for snap in range(endSnap,startSnap-1,-1):
+	for snap in range(opt.endSnap,opt.startSnap-1,-1):
 
 		snapKey = "Snap_%03d" %snap
 
 		halodata[snapKey] = {}
 
 		filename=snapfilelist.readline().strip()
-		print("Reading ",filename)
+		if(opt.iverbose>0): print("Reading ",filename)
 
-		isnap =  snap - startSnap
+		isnap =  snap - opt.startSnap
 		# Extract the radshift from the filename
 		Redshift[isnap] = float(filename[filename.find("z")+1:filename.find(".AHF")])
 
@@ -98,7 +107,7 @@ def ReadInHaloFilesAcrossSnapshots(startSnap,endSnap,filelist,fieldsDict):
 
 				elif(MTFfieldname=="Pos"):
 					splitfields  = fieldname.split(",")
-					halodata[snapKey][MTFfieldname]=np.column_stack([tmpData[splitfield] for splitfield in splitfields])/1000
+					halodata[snapKey][MTFfieldname]=np.column_stack([tmpData[splitfield] for splitfield in splitfields])
 
 				else:
 					splitfields  = fieldname.split(",")
@@ -112,48 +121,46 @@ def ReadInHaloFilesAcrossSnapshots(startSnap,endSnap,filelist,fieldsDict):
 	return Redshift,halodata
 
 
-def ReadHaloMergerTreeAcrossSnapshots(startSnap,endSnap,filelist):
+def ReadHaloMergerTreeAcrossSnapshots(opt):
 	"""
 	Function to read the Merger Tree from AHF across snapshots
 	"""
-	start=time.clock()  
-	snapfilelist=open(filelist,"r")
-	# halodata = 
+	if(opt.iverbose>0): print("Reading the tree in the MergerTree format")
+	start=time.clock()
+	snapfilelist=open(opt.AHFtreefilelist,"r")
 
-	treedata = {"Snap_%03d" %startSnap:{"HaloID": [], "Num_progen": [], "Progenitors": [],"SharedNpart":[],"mainProgenitor":[]}}
-	for snap in range(endSnap,startSnap,-1):
+	treedata = {"Snap_%03d" %opt.startSnap:{"HaloID": [], "Num_progen": [], "Progenitors": [],"mainProgenitor":[]}}
+	for snap in range(opt.endSnap,opt.startSnap,-1):
 		filename=snapfilelist.readline().strip()
-		print("Reading treefile",filename)
+		if(opt.iverbose>0):print("Reading treefile",filename)
 		treefile=open(filename,"r")
 		header1=treefile.readline()
 		header2=treefile.readline()
 		treefile_idx = open(filename+"_idx","r")
 		header_idx = treefile_idx.readline()
-	   
+
 		snapKey = "Snap_%03d" %snap
 
-		treedata[snapKey] = {"HaloID": [], "Num_progen": [], "Progenitors": [],"SharedNpart":[],"mainProgenitor":[]}
-		 
-		j=0
+		treedata[snapKey] = {"HaloID": [], "Num_progen": [], "Progenitors": [],"mainProgenitor":[]}
 
+		j=0
 		while(True):
 			try:
-				HostID,HostNpart,Num_progen=treefile.readline().strip().split("  ")
+				line = treefile.readline().strip().split("  ")
+				HostID,HostNpart,Num_progen=line
 				HostID,Progenitor = treefile_idx.readline().strip().split(" ")
 			except ValueError:
+				if((j==0) & (line!=[''])):
+					raise SystemExit("The tree cannot be read, please check if the tree is in sussing format. If so set sussingformat = 1 in convToETF.cfg")
 				break
 			treedata[snapKey]["HaloID"].append(np.int64(HostID))
 			treedata[snapKey]["Num_progen"].append(np.int(Num_progen))
 			treedata[snapKey]["mainProgenitor"].append(np.int64(Progenitor))
 			treedata[snapKey]["Progenitors"].append([])
-			treedata[snapKey]["SharedNpart"].append([])
 			for iprogen in range(int(Num_progen)):
-				line=treefile.readline().strip().split("  ")
-				[SharedNpart,SatID,SatNpart]=line
+				[SharedNpart,SatID,SatNpart]=treefile.readline().strip().split("  ")
 				treedata[snapKey]["Progenitors"][j].append(np.int64(SatID))
-				treedata[snapKey]["SharedNpart"][j].append(np.int64(SharedNpart))
 			treedata[snapKey]["Progenitors"][j] = np.array(treedata[snapKey]["Progenitors"][j])
-			treedata[snapKey]["SharedNpart"][j] = np.array(treedata[snapKey]["SharedNpart"][j])
 			j+=1
 		treedata[snapKey]["HaloID"]=np.array(treedata[snapKey]["HaloID"])
 		treedata[snapKey]["Num_progen"]=np.array(treedata[snapKey]["Num_progen"])
@@ -161,22 +168,90 @@ def ReadHaloMergerTreeAcrossSnapshots(startSnap,endSnap,filelist):
 	print("Tree data read in ",time.clock()-start)
 	return treedata	
 
+def ReadHaloMergerTreeAcrossSnapshots_SussingFormat(opt,halodata):
+	"""
+	Function to read the Merger Tree from AHF across snapshots (Sussing Merger Trees file format)
+	"""
+	if(opt.iverbose>0): print("Reading the tree in the sussing format")
+	start=time.clock()
+	snapfilelist=open(opt.AHFtreefilelist,"r")
 
-def walkDownProgenBranches(snap,halodata,treedata,MTFdata,Progenitors,Descendant,TreeEndDescendant,HALOIDVAL,startSnap,depth,treeProgenIndex=0):
+	treedata = {"Snap_%03d" %snap:{} for snap in range(opt.endSnap,opt.startSnap,-1) }
+	dsetkeys = ["HaloID","HaloIndex","Num_progen","Progenitors","mainProgenitor","mainProgenitorSnap","mainProgenitorIndex"]
+	#Intilize the data
+	for snap in range(opt.endSnap,opt.startSnap,-1):
 
-	#print(Descendant,Progenitors,treeProgenIndex)
+			snapKey= "Snap_%03d" %snap
+			numhalos = halodata[snapKey]["HaloID"].size
+			treedata[snapKey]["HaloID"] = np.zeros(numhalos,dtype=np.int64)
+			treedata[snapKey]["HaloIndex"] = np.zeros(numhalos,dtype=np.int64)
+			treedata[snapKey]["mainProgenitor"] = np.zeros(numhalos,dtype=np.int64)
+			treedata[snapKey]["mainProgenitorSnap"] = np.zeros(numhalos,dtype=np.int32)
+			treedata[snapKey]["mainProgenitorIndex"] = np.zeros(numhalos,dtype=np.int64)
+			treedata[snapKey]["Num_progen"] = np.zeros(numhalos,dtype=np.int32)
+			treedata[snapKey]["Progenitors"] = [[] for i in range(numhalos)]
 
-	
 
+	for snap in range(opt.endSnap,opt.startSnap,-1):
+		filename=snapfilelist.readline().strip()
+		if(opt.iverbose>0): print("Reading treefile",filename)
+		treefile=open(filename,"r")
+		header1=treefile.readline()
+		snapKey = "Snap_%03d" %snap
+
+		j=0
+		while(True):
+			try:
+				line=treefile.readline().strip().split("  ")
+				HostID,Num_progen=line
+			except ValueError:
+				if((j==0) & (line!=[''])):
+					raise SystemExit("The tree cannot be read, please check if the tree is in the MergerTree format. If so set sussingformat = 0 in convToETF.cfg")
+				break
+			if(np.int(Num_progen) > 0):
+
+				HostID = np.int64(HostID)
+				haloSnap = np.int64(HostID/opt.HALOIDVAL)
+				haloIndex = np.int64(HostID%opt.HALOIDVAL-1)
+				haloSnapKey = "Snap_%03d" %haloSnap
+
+				treedata[haloSnapKey]["HaloID"][haloIndex] = HostID
+				treedata[haloSnapKey]["HaloIndex"][haloIndex] = haloIndex
+				treedata[haloSnapKey]["Num_progen"][haloIndex]  = np.int32(Num_progen)
+				for iprogen in range(int(Num_progen)):
+					[SatID]=treefile.readline().strip().split("  ")
+					SharedNpart = 0
+					if(iprogen==0):
+						treedata[haloSnapKey]["mainProgenitor"][haloIndex] = np.int64(SatID)
+					treedata[haloSnapKey]["Progenitors"][haloIndex].append(np.int64(SatID))
+				treedata[haloSnapKey]["Progenitors"][haloIndex] = np.array(treedata[haloSnapKey]["Progenitors"][haloIndex],dtype=np.int64)
+				j+=1
+
+
+	for snap in range(opt.endSnap,opt.startSnap,-1):
+		snapKey = "Snap_%03d" %snap
+		treedata[snapKey]["mainProgenitorSnap"][:] = np.array(treedata[snapKey]["mainProgenitor"]/opt.HALOIDVAL,dtype="int32")
+		treedata[snapKey]["mainProgenitorIndex"][:] = np.array(treedata[snapKey]["mainProgenitor"]%opt.HALOIDVAL-1,dtype="int64")
+
+	print("Tree data read in ",time.clock()-start)
+	return treedata
+
+
+def walkDownProgenBranches(opt,snap,halodata,treedata,MTFdata,Progenitors,Descendant,TreeEndDescendant,HALOIDVAL,startSnap,depth,treeProgenIndex=0):
 	
 
 	for haloID in Progenitors:
 
-		haloSnap = snap
-		haloSnapKey = "Snap_%03d" %snap 
+		if(opt.sussingformat):
+			haloSnap = np.int64(haloID/opt.HALOIDVAL)
+			haloSnapKey = "Snap_%03d" %haloSnap
+			haloIndex = np.int64(haloID%opt.HALOIDVAL-1)
 
-		# Lets set these progen branches to point up to the descendant and EndDescendant halo
-		haloIndex = np.where(halodata[haloSnapKey]["HaloID"]==haloID)[0].astype(int)
+		else:
+			haloSnap = snap
+			haloSnapKey = "Snap_%03d" %snap
+			# Lets set these progen branches to point up to the descendant and EndDescendant halo
+			haloIndex = np.where(halodata[haloSnapKey]["HaloID"]==haloID)[0].astype(int)
 		
 		if(MTFdata[haloSnapKey]["HaloID"][haloIndex]==0):
 
@@ -187,7 +262,8 @@ def walkDownProgenBranches(snap,halodata,treedata,MTFdata,Progenitors,Descendant
 			while(True):
 
 				#Lets set the ID for this halo
-				MTFdata[haloSnapKey]["HaloID"][haloIndex] = haloSnap * HALOIDVAL + haloIndex +1
+				if(opt.sussingformat): MTFdata[haloSnapKey]["HaloID"][haloIndex] =  halodata[haloSnapKey]["HaloID"][haloIndex]
+				else: MTFdata[haloSnapKey]["HaloID"][haloIndex] = haloSnap * HALOIDVAL + haloIndex +1
 				#if(depth==0): print("Doing halo",MTFdata[haloSnapKey]["HaloID"][haloIndex],haloID)
 
 				#If we are at the endsnap of the simulation then we don't have to search for the final progenitor
@@ -196,32 +272,37 @@ def walkDownProgenBranches(snap,halodata,treedata,MTFdata,Progenitors,Descendant
 					break
 
 				# Find where it exists in the treedata
-				treeProgenIndx = np.where(treedata[haloSnapKey]["HaloID"]==haloID)[0]
+				if(opt.sussingformat): treeProgenIndx = treedata[haloSnapKey]["HaloIndex"][haloIndex]
+				else: treeProgenIndx = np.where(treedata[haloSnapKey]["HaloID"]==haloID)[0]
 
 				# If it doesn't exist in the treedata lets break out of the loop
-				if(treeProgenIndx.size==0):
+				if((treeProgenIndx.size==0) | (treedata[haloSnapKey]["HaloID"][haloIndex]==0)): 
 					#print("Reached StartProgenitor for halo",MTFdata[haloSnapKey]["HaloID"][haloIndex])
 					MTFdata[haloSnapKey]["Progenitor"][haloIndex] = MTFdata[haloSnapKey]["HaloID"][haloIndex]
 					break
 
 				# Lets find all the progenitors for this halo
-				Progenitors = treedata[haloSnapKey]["Progenitors"][int(treeProgenIndx)]
+				Progenitors = treedata[haloSnapKey]["Progenitors"][treeProgenIndx]
 
 				#Lets find its main progenitor
-				mainProgenitor = treedata[haloSnapKey]["mainProgenitor"][int(treeProgenIndx)]
+				mainProgenitor = treedata[haloSnapKey]["mainProgenitor"][treeProgenIndx]
 
 				# Make sure the main progenitor isn't in the list of progenitors
 				SecondaryProgenitors = Progenitors[Progenitors!=mainProgenitor]
 
-				MTFdata = walkDownProgenBranches(haloSnap - 1,halodata,treedata,MTFdata,SecondaryProgenitors,MTFdata[haloSnapKey]["HaloID"][haloIndex],TreeEndDescendant,HALOIDVAL,startSnap,depth+1,treeProgenIndx)
+				if(SecondaryProgenitors.size):
+					MTFdata = walkDownProgenBranches(opt,haloSnap - 1,halodata,treedata,MTFdata,SecondaryProgenitors,MTFdata[haloSnapKey]["HaloID"][haloIndex],TreeEndDescendant,HALOIDVAL,startSnap,depth+1,treeProgenIndx)
 
-				# Lets find the info for its progenitor
-				progenSnap = haloSnap - 1
-				progenSnapKey = "Snap_%03d" %progenSnap
-				progenIndex = int(np.where(halodata[progenSnapKey]["HaloID"]==mainProgenitor)[0])
-
-				# Ltes set the current halos progenitor as the main progenitor
-				MTFdata[haloSnapKey]["Progenitor"][haloIndex] = progenSnap * HALOIDVAL + progenIndex +1
+				if(opt.sussingformat):
+					progenSnap = treedata[haloSnapKey]["mainProgenitorSnap"][treeProgenIndx]
+					progenSnapKey = "Snap_%03d" %progenSnap
+					progenIndex = treedata[haloSnapKey]["mainProgenitorIndex"][treeProgenIndx]
+					MTFdata[haloSnapKey]["Progenitor"][haloIndex] = mainProgenitor
+				else:
+					progenSnap = haloSnap - 1
+					progenSnapKey = "Snap_%03d" %progenSnap
+					progenIndex = np.int64(np.where(halodata[progenSnapKey]["HaloID"]==mainProgenitor)[0])
+					MTFdata[haloSnapKey]["Progenitor"][haloIndex] = progenSnap * HALOIDVAL + progenIndex +1
 
 				# Lets set the current 
 				MTFdata[progenSnapKey]["Descendant"][progenIndex] = MTFdata[haloSnapKey]["HaloID"][haloIndex]
@@ -235,101 +316,38 @@ def walkDownProgenBranches(snap,halodata,treedata,MTFdata,Progenitors,Descendant
 
 	return MTFdata
 
-def SetProgenitorandDescendants(snap,startSnap,numhalos,halodata,treedata,MTFdata,HALOIDVAL):
-
-	progenSnap = snap - 1
-
-	isnap =  snap - startSnap
-	print("Doing snap",snap,isnap)
-
-
-
-	snapKey = "Snap_%03d" %snap
-	progenSnapKey = "Snap_%03d" %(snap-1)
-
-
-	snapData = MTFdata[snapKey]
-	progenSnapData = MTFdata[progenSnapKey]
-
-	
-
-	for ihalo in range(numhalos[isnap]):
 		
+def SetProgenandDesc(opt,ihalo,snap,startSnap,halodata,treedata,MTFdata,HALOIDVAL):
 
-		HaloID = halodata[snapKey]["HaloID"][ihalo]
-
-		HostID = halodata[snapKey]["HostHaloID"][ihalo]
-		if(HostID!=0):
-
-			#Find the location of the host in the catalogue
-			HostLoc = int(np.where(halodata[snapKey]["HaloID"]==HostID)[0])
-
-			#Adjust the hosts ID
-			snapData["HostHaloID"][ihalo] = snap * HALOIDVAL + HostLoc + 1
-
-		#Find where in the treedata the haloID equal this haloID
-		treeProgenIndx =np.where(treedata[snapKey]["HaloID"]==HaloID)[0]
-
-		#If it does not exist in the treedata then that branch no longer exists
-		if(treeProgenIndx.size==0):
-			#Set its progenitor to point back to itself
-			snapData["Progenitor"][ihalo] = snapData["HaloID"][ihalo]
-			continue
-		
-
-		# Find all this halo progenitors
-		Progenitors = treedata[snapKey]["Progenitors"][int(treeProgenIndx)]
-
-		# Find the main progenitor for this halo
-		mainProgenitor = treedata[snapKey]["mainProgenitor"][int(treeProgenIndx)]
-		# print("This haloID",haloID, " mainProgenitor is", mainProgenitor)
-
-		# Remove the main progenitor from the list of progenitors
-		Progenitors = Progenitors[Progenitors!=mainProgenitor]
-
-		# Set the data for the main progenitor
-		progenIndex = int(np.where(halodata[progenSnapKey]["HaloID"]==mainProgenitor)[0])
-		snapData["Progenitor"][ihalo] = progenSnap * HALOIDVAL + progenIndex +1
-
-		#Lets set the descendant of the progenitor halo
-		progenSnapData["Descendant"][progenIndex] = snapData["HaloID"][ihalo] 
-
-		#Now lets set the rest of the progenitors descendants to be this halo
-		for progen in Progenitors:
-
-			progenIndex = int(np.where(halodata[progenSnapKey]["HaloID"]==progen)[0])
-
-			progenSnapData["Descendant"][progenIndex] = snapData["HaloID"][ihalo] 
-
-	
-	MTFdata[snapKey] = snapData
-
-
-	deadSel = progenSnapData["Descendant"]==0
-	progenSnapData["Descendant"][deadSel]=progenSnapData["HaloID"][deadSel]
-	MTFdata[progenSnapKey] = progenSnapData
-		
-
-		
-def SetProgenandDesc(ihalo,snap,startSnap,halodata,treedata,MTFdata,HALOIDVAL):
-
-	
 	snapKey = "Snap_%03d" %snap
 
 	HostID = halodata[snapKey]["HostHaloID"][ihalo]
 	if(HostID!=0):
 
-		#Find the location of the host in the catalogue
-		HostLoc = int(np.where(halodata[snapKey]["HaloID"]==HostID)[0])
+		if(opt.sussingformat):
+			MTFdata[snapKey]["HostHaloID"][ihalo] = HostID
+		else:
 
-		#Adjust the hosts ID
-		MTFdata[snapKey]["HostHaloID"][ihalo] = snap * HALOIDVAL + HostLoc + 1
+			#Find the location of the host in the catalogue
+			pos = np.where(halodata[snapKey]["HaloID"]==HostID)[0]
+
+			# Check if the host halo ID exist in the AHF catalog
+			if(len(pos)==0):
+				print('Found HostHaloID=',HostID,'in AHF catalogue that does not point to an existing HaloID: resetting pointers!')
+				HostID = np.int64(0)
+				halodata[snapKey]["HostHaloID"][ihalo] = np.int64(0)
+				MTFdata[snapKey]["HostHaloID"][ihalo]  = np.int64(0)
+			else:
+				HostLoc = int(pos)
+
+				#Adjust the hosts ID
+				MTFdata[snapKey]["HostHaloID"][ihalo] = snap * HALOIDVAL + HostLoc + 1
 
 	if(MTFdata[snapKey]["HaloID"][ihalo]==0):
 		
 
-
-		MTFdata[snapKey]["HaloID"][ihalo] = snap * HALOIDVAL + ihalo +1
+		if(opt.sussingformat): MTFdata[snapKey]["HaloID"][ihalo] = halodata[snapKey]["HaloID"][ihalo]
+		else: MTFdata[snapKey]["HaloID"][ihalo] = snap * HALOIDVAL + ihalo +1
 	
 
 		TreeEndDescendant = MTFdata[snapKey]["HaloID"][ihalo]
@@ -360,34 +378,40 @@ def SetProgenandDesc(ihalo,snap,startSnap,halodata,treedata,MTFdata,HALOIDVAL):
 
 
 			#Find where in the treedata the haloID equal this haloID
-			treeProgenIndx = np.where(treedata[haloSnapKey]["HaloID"]==haloID)[0]
+			if(opt.sussingformat): treeProgenIndx = treedata[haloSnapKey]["HaloIndex"][haloIndex]
+			else: treeProgenIndx = np.where(treedata[haloSnapKey]["HaloID"]==haloID)[0]
 
 			#If it does not exist in the treedata then that branch no longer exists
-			if(treeProgenIndx.size==0):
+			if((treeProgenIndx.size==0) | (treedata[haloSnapKey]["HaloID"][haloIndex]==0)): 
 				#Set its progenitor to point back to itself
 				MTFdata[haloSnapKey]["Progenitor"][haloIndex] = MTFdata[haloSnapKey]["HaloID"][haloIndex]
 				break
 
-
 			# Find all this halo progenitors
-			Progenitors = treedata[haloSnapKey]["Progenitors"][int(treeProgenIndx)]
+			Progenitors = treedata[haloSnapKey]["Progenitors"][treeProgenIndx]
 
 			# Find the main progenitor for this halo
-			mainProgenitor = treedata[haloSnapKey]["mainProgenitor"][int(treeProgenIndx)]
+			mainProgenitor = treedata[haloSnapKey]["mainProgenitor"][treeProgenIndx]
 			# print("This haloID",haloID, " mainProgenitor is", mainProgenitor)
 
 			# Remove the main progenitor from the list of progenitors
 			SecondaryProgenitors = Progenitors[Progenitors!=mainProgenitor]
 
 			# Walk down the progenitor branches setting the Progenitor, Descedant and RootDesendant for each halo
-			MTFdata = walkDownProgenBranches(haloSnap - 1,halodata,treedata,MTFdata,SecondaryProgenitors,MTFdata[haloSnapKey]["HaloID"][haloIndex],TreeEndDescendant,HALOIDVAL,startSnap,0)
+			if(SecondaryProgenitors.size):
+				MTFdata = walkDownProgenBranches(opt,haloSnap - 1,halodata,treedata,MTFdata,SecondaryProgenitors,MTFdata[haloSnapKey]["HaloID"][haloIndex],TreeEndDescendant,HALOIDVAL,startSnap,0)
 
 			# Set the data for the main progenitor
-			progenSnap = haloSnap - 1
-			progenSnapKey = "Snap_%03d" %progenSnap
-			progenIndex = int(np.where(halodata[progenSnapKey]["HaloID"]==mainProgenitor)[0])
-
-			MTFdata[haloSnapKey]["Progenitor"][haloIndex] = progenSnap * HALOIDVAL + progenIndex +1
+			if(opt.sussingformat):
+				progenSnap = treedata[haloSnapKey]["mainProgenitorSnap"][treeProgenIndx]
+				progenSnapKey = "Snap_%03d" %progenSnap
+				progenIndex = treedata[haloSnapKey]["mainProgenitorIndex"][treeProgenIndx]
+				MTFdata[haloSnapKey]["Progenitor"][haloIndex] = mainProgenitor
+			else:
+				progenSnap = haloSnap - 1
+				progenSnapKey = "Snap_%03d" %progenSnap
+				progenIndex = np.int64(np.where(halodata[progenSnapKey]["HaloID"]==mainProgenitor)[0])
+				MTFdata[haloSnapKey]["Progenitor"][haloIndex] = progenSnap * HALOIDVAL + progenIndex +1
 			Descendant = MTFdata[haloSnapKey]["HaloID"][haloIndex]
 	
 			haloSnap = progenSnap
@@ -395,28 +419,27 @@ def SetProgenandDesc(ihalo,snap,startSnap,halodata,treedata,MTFdata,HALOIDVAL):
 			haloIndex = progenIndex
 			haloID= mainProgenitor
 
-			MTFdata[haloSnapKey]["HaloID"][haloIndex] = haloSnap * HALOIDVAL + haloIndex +1
+			if(opt.sussingformat): MTFdata[haloSnapKey]["HaloID"][haloIndex] = halodata[haloSnapKey]["HaloID"][haloIndex]
+			else: MTFdata[haloSnapKey]["HaloID"][haloIndex] = haloSnap * HALOIDVAL + haloIndex +1
 
 		# print("Done tree with EndDescendant",TreeEndDescendant,"in",time.time()-starthalo)
 
 
-
-
-def SetProgenandDescParallel(snap,halochunk,startSnap,endSnap,halodata,treedata,MTFdata,mpMTFdata,lock,HALOIDVAL):
+def SetProgenandDescParallel(opt,snap,halochunk,halodata,treedata,MTFdata,mpMTFdata,lock,HALOIDVAL):
 
 	name = mp.current_process().name
-	print(name,"is doing",np.min(halochunk),"to",np.max(halochunk))
+	if(opt.iverbose>1): print(name,"is doing",np.min(halochunk),"to",np.max(halochunk))
 
 	for ihalo in halochunk:
-		SetProgenandDesc(ihalo,snap,startSnap,halodata,treedata,MTFdata,HALOIDVAL)
+		SetProgenandDesc(opt,ihalo,snap,opt.startSnap,halodata,treedata,MTFdata,HALOIDVAL)
 
-	print(name,"is on to copying the data")
+	if(opt.iverbose>1): print(name,"is on to copying the data")
 
 	#Aquire the lock for the mpMTFdata
 	lock.acquire()
 
 	#Lets copy the local MTFdata to the global mpMTFdata
-	for snap in range(startSnap,endSnap+1):
+	for snap in range(opt.startSnap,opt.endSnap+1):
 		snapKey = "Snap_%03d" %snap
 
 		#Find the additions to the dataset
@@ -442,20 +465,18 @@ def SetProgenandDescParallel(snap,halochunk,startSnap,endSnap,halodata,treedata,
 	#Delete this processes local copy of the MTFdata
 	del MTFdata
 
-	print(name,"is done")
+	if(opt.iverbose>1): print(name,"is done")
 
 
-def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
-
-
+def convToMTF(opt,halodata,treedata,HALOIDVAL = 1000000000000):
 
 
 	totstart = time.time()
 
-	requiredFields = ["HaloID","StartProgenitor","Progenitor","Descendant","EndDescendant","M200crit","Pos","HostHaloID"]
-	extraFields = [field for field in halodata["Snap_%03d" %startSnap].keys() if field not in requiredFields] 
+	requiredFields = ["HaloID","StartProgenitor","Progenitor","Descendant","EndDescendant","Mass","Radius","Pos","HostHaloID"]
+	extraFields = [field for field in halodata["Snap_%03d" %opt.startSnap].keys() if field not in requiredFields]
 
-	numsnaps = endSnap - startSnap + 1
+	numsnaps = opt.endSnap - opt.startSnap + 1
 
 	numhalos = np.zeros(numsnaps,dtype=np.int64)
 
@@ -464,10 +485,10 @@ def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
 	MTFdata = {}
 
 
-	for snap in range(endSnap,startSnap-1,-1):
+	for snap in range(opt.endSnap,opt.startSnap-1,-1):
 
 		snapKey = "Snap_%03d" %snap
-		isnap = endSnap - snap 
+		isnap = opt.endSnap - snap
 
 		# Setup another dictionary inside each snapshto to store the data
 		MTFdata[snapKey] = {}
@@ -490,15 +511,15 @@ def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
 
 	lock = manager.Lock()
 
-	mpMTFdata=manager.dict({"Snap_%03d" %snap:manager.dict({key:manager.Array(np.sctype2char(MTFdata["Snap_%03d" %snap][key]),MTFdata["Snap_%03d" %snap][key]) for key in MTFdata["Snap_%03d" %snap].keys()}) for snap in range(startSnap,endSnap+1)})
+	mpMTFdata=manager.dict({"Snap_%03d" %snap:manager.dict({key:manager.Array(np.sctype2char(MTFdata["Snap_%03d" %snap][key]),MTFdata["Snap_%03d" %snap][key]) for key in MTFdata["Snap_%03d" %snap].keys()}) for snap in range(opt.startSnap,opt.endSnap+1)})
 
 	chunksize=10000
 
-	for snap in range(endSnap,startSnap-1,-1):
+	for snap in range(opt.endSnap,opt.startSnap-1,-1):
 
 		start = time.time()
 
-		isnap = endSnap - snap
+		isnap = opt.endSnap - snap
 
 		snapKey = "Snap_%03d" %snap
 
@@ -510,14 +531,14 @@ def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
 
 		inumhalos = len(ihalos)
 
-		print("Doing snap", snap,"with",inumhalos,"unset halos")
+		if(opt.iverbose>0): print("Doing snap", snap,"with",inumhalos,"unset halos")
 
 
-		if(numhalounset>2*chunksize):
+		if((numhalounset>2*chunksize) & (opt.sussingformat==False)):
 
 			nthreads=int(min(mp.cpu_count(),np.ceil(inumhalos/float(chunksize))))
 			nchunks=int(np.ceil(inumhalos/float(chunksize)/float(nthreads)))
-			print("Using", nthreads,"threads to parse ",inumhalos," halos in ",nchunks,"chunks, each of size", chunksize)
+			if(opt.iverbose>1): print("Using", nthreads,"threads to parse ",inumhalos," halos in ",nchunks,"chunks, each of size", chunksize)
 			#now for each chunk run a set of proceses
 			for j in range(nchunks):
 				offset=j*nthreads*chunksize
@@ -536,7 +557,7 @@ def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
 				if (j==nchunks-1):
 					halochunk[-1]=range(offset+(nthreads-1)*chunksize,numhalos[isnap])
 				#when calling a process pass not just a work queue but the pointers to where data should be stored
-				processes=[mp.Process(target=SetProgenandDescParallel,args=(snap,halochunk[k],startSnap,endSnap,halodata,treedata,MTFdata,mpMTFdata,lock,HALOIDVAL)) for k in range(nthreads)]
+				processes=[mp.Process(target=SetProgenandDescParallel,args=(opt,snap,halochunk[k],halodata,treedata,MTFdata,mpMTFdata,lock,HALOIDVAL)) for k in range(nthreads)]
 				count=0
 				for p in processes:
 					p.start()
@@ -545,7 +566,7 @@ def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
 					#join thread and see if still active
 					p.join()
 
-			for snap in range(startSnap,endSnap+1):
+			for snap in range(opt.startSnap,opt.endSnap+1):
 				snapKey = "Snap_%03d" %snap
 				# sel = np.where(MTFdata[snapKey]["HaloID"]>0)[0]
 				for key in MTFdata[snapKey].keys():
@@ -556,10 +577,10 @@ def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
 
 			for ihalo in ihalos:
 
-				SetProgenandDesc(ihalo,snap,startSnap,halodata,treedata,MTFdata,HALOIDVAL)
+				SetProgenandDesc(opt,ihalo,snap,opt.startSnap,halodata,treedata,MTFdata,HALOIDVAL)
 
 
-		print("Done snap in",time.time()-start,np.sum(MTFdata["Snap_%03d" %snap]["HaloID"]==0))	
+		if(opt.iverbose>0): print("Done snap in",time.time()-start,np.sum(MTFdata["Snap_%03d" %snap]["HaloID"]==0))
 
 	print("Setting StartProgenitors")
 
@@ -567,10 +588,10 @@ def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
 	#Walk back up the tree setting the StartProgenitors
 
 
-	for snap in range(startSnap,endSnap+1):
+	for snap in range(opt.startSnap,opt.endSnap+1):
 
 		snapKey = "Snap_%03d" %snap
-		isnap = endSnap - snap
+		isnap = opt.endSnap - snap
 
 		for ihalo in range(numhalos[isnap]):
 
@@ -614,35 +635,17 @@ def convToMTF(startSnap,endSnap,halodata,treedata,HALOIDVAL = 1000000000000):
 
 
 	# Lets set the data in the extra fields
-	for snap in range(endSnap,startSnap-1,-1):
+	for snap in range(opt.endSnap,opt.startSnap-1,-1):
 
 		snapKey = "Snap_%03d" %snap
 
-		MTFdata[snapKey]["Mass"] = halodata[snapKey]["Mass"]
-		MTFdata[snapKey]["Radius"] = halodata[snapKey]["Radius"]
-		MTFdata[snapKey]["Pos"] = halodata[snapKey]["Pos"]
+		MTFdata[snapKey]["Mass"] = halodata[snapKey]["Mass"]/1e10
+		MTFdata[snapKey]["Radius"] = halodata[snapKey]["Radius"]/1000
+		MTFdata[snapKey]["Pos"] = halodata[snapKey]["Pos"]/1000
 		for extraField in extraFields:
 				MTFdata[snapKey][extraField]  = halodata[snapKey][extraField]
-
 
 	print("Done conversion in",time.time()-totstart)
 
 
 	return MTFdata
-
-				
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

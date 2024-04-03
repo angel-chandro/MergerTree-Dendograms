@@ -180,7 +180,7 @@ def plotDendogram(plotOpt,plotData,depthIndicator,branchIndicator,sortIndx,SelID
 		raise Exception("After removing all branches that do not exist in the plot there is only the main branch left. \nThis can happen due to incorrect units.")
 
 	fsnap = plotData["xposData"].shape[0] -1 +plotOpt.snapoffset
-	isnap = np.where(np.count_nonzero(plotData["xposData"],axis=1) > 0)[0][0] -10 + plotOpt.snapoffset
+	isnap = np.where(np.count_nonzero(plotData["xposData"],axis=1) > 0)[0][0] -10 + plotOpt.snapoffset; isnap = 0
 	numsnaps = fsnap - isnap +1
 
 	#If the number of branches is greater than the plotOpt.maxNumBranches set it to the plotOpt.maxNumBranches
@@ -310,30 +310,30 @@ def plotDendogram(plotOpt,plotData,depthIndicator,branchIndicator,sortIndx,SelID
 		col = prog_colors.to_rgba(depthIndicator[i]) if(maxdepth>2) else "black"
 		if((i!=(numBranches-1)) & (i>0)):
 			if(branchIndicator[i]==0):
-				axes[i].scatter(plotOpt.plotNumRvir/2.0,isnap+5,s=2000,color=col)
+				axes[i].scatter(plotOpt.plotNumRvir/2.0,isnap+2,s=2000,color=col) #axes[i].scatter(plotOpt.plotNumRvir/2.0,isnap+4,s=2000,color=col)
 			elif((depthIndicator[i]==1) & (depthIndicator[i+1]>1)):
-				axes[i].fill_between([0.5,plotOpt.plotNumRvir],isnap,isnap+10,color=col)
+				axes[i].fill_between([0.5,plotOpt.plotNumRvir],isnap,isnap+4,color=col) #axes[i].fill_between([0.5,plotOpt.plotNumRvir],isnap,isnap+10,color=col)
 			elif((depthIndicator[i]>1) & (depthIndicator[i+1]<2)):
-				axes[i].fill_between([0.0,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color=col)
+				axes[i].fill_between([0.0,plotOpt.plotNumRvir-0.5],isnap,isnap+4,color=col) #axes[i].fill_between([0.0,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color=col)
 			elif((depthIndicator[i]>1) & (depthIndicator[i+1]>1)):
-				axes[i].fill_between([0.0,plotOpt.plotNumRvir],isnap,isnap+10,color = col)
+				axes[i].fill_between([0.0,plotOpt.plotNumRvir],isnap,isnap+4,color = col) #axes[i].fill_between([0.0,plotOpt.plotNumRvir],isnap,isnap+10,color = col)
 			elif((depthIndicator[i]==-1) & (depthIndicator[i+1]>1)):
-				axes[i].fill_between([0.5,plotOpt.plotNumRvir],isnap,isnap+10,color="green")
+				axes[i].fill_between([0.5,plotOpt.plotNumRvir],isnap,isnap+4,color="green") #axes[i].fill_between([0.5,plotOpt.plotNumRvir],isnap,isnap+10,color="green")
 			elif(depthIndicator[i]==-1):
-				axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color="green")
+				axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+4,color="green") #axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color="green")
 			else:
-				axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color=col)
+				axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+4,color=col) #axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color=col)
 		elif(i>0):
 			if(depthIndicator[i]>1):
-				axes[i].fill_between([0.0,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color = col)
+				axes[i].fill_between([0.0,plotOpt.plotNumRvir-0.5],isnap,isnap+4,color = col) #axes[i].fill_between([0.0,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color = col)
 			elif(depthIndicator[i]<0):
-				axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color="green")
+				axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+4,color="green") #axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color="green")
 			else:
-				axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color=col)
+				axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+4,color=col) #axes[i].fill_between([0.5,plotOpt.plotNumRvir-0.5],isnap,isnap+10,color=col)
 
 		#Set ylim and the ticks
 		axes[i].set_ylim(isnap,fsnap)
-		yticks=np.arange((isnap+9) //10 *10,fsnap+10,10)
+		yticks=np.arange((isnap+9) //10 *10,fsnap+10,10) #yticks=np.arange((isnap+9) //10 *10,fsnap+10,10)
 		axes[i].set_yticks(yticks)
 		axes[i].grid(True,axis="y")
 
@@ -344,7 +344,7 @@ def plotDendogram(plotOpt,plotData,depthIndicator,branchIndicator,sortIndx,SelID
 
 		#Add a dashed line ar 1 Rvir if not on the main branch and set the ylim to 2.5
 		if(i>0):
-			axes[i].text(plotOpt.plotNumRvir/2.0 - 0.5,fsnap+numsnaps *0.01,"%i" %i,fontsize=30, weight = 'bold')
+			axes[i].text(plotOpt.plotNumRvir/2.0 - 0.5,fsnap+numsnaps *0.01 +2,"%i" %i,fontsize=30, weight = 'bold') #axes[i].text(plotOpt.plotNumRvir/2.0 - 0.5,fsnap+numsnaps *0.01,"%i" %i,fontsize=30, weight = 'bold')
 			axes[i].axvline(1,ls="dashed")
 			axes[i].set_xlim(0,plotOpt.plotNumRvir)
 			axes[i].set_xticks(np.arange(1,plotOpt.plotNumRvir,1))

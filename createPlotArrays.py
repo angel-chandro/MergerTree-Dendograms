@@ -252,226 +252,228 @@ def MoveBranches(perIndx,branchIndicator,depthIndicator,Indexes,Indx,depth):
 
 
 def createPlotArrays(opt,plotOpt,treedata,SelIndex,outdir='',outputArrays=False):
-	"""
-	Function to generate the plot arrays
+        """
+        Function to generate the plot arrays
 
 	"""
 
-	plotData = {}
+        plotData = {}
 
-	AllStartProgenitors, AllBranchIndicators = getStartProgenitors(opt,treedata,SelIndex)
+        AllStartProgenitors, AllBranchIndicators = getStartProgenitors(opt,treedata,SelIndex)
 
-	if(len(AllStartProgenitors)==0):
-		return [],[],[],[],[]
+        if(len(AllStartProgenitors)==0):
+                 return [],[],[],[],[]
 
 
-	start = time.time()
-	print("Now creating the plot arrays")
+        start = time.time()
+        print("Now creating the plot arrays")
 
-	numBranches = np.int32(AllStartProgenitors.shape[0])
+        numBranches = np.int32(AllStartProgenitors.shape[0])
 
 	#Intilize the plotting arrays for the data
-	plotData["xposData"] = np.zeros([opt.Nsnaps,numBranches],dtype=np.float32) #The x-position of the point
-	plotData["SizeData"] = np.zeros([opt.Nsnaps,numBranches],dtype=treedata["Snap_%03d" %opt.startSnap]["SizeData"].dtype) #The size of the data-point
-	plotData["ColData"] = np.zeros([opt.Nsnaps,numBranches],dtype=treedata["Snap_%03d" %opt.startSnap]["ColData"].dtype) #The color of the point
-	if(plotOpt.overplotdata):
-		plotData["OverPlotData"] = np.zeros([opt.Nsnaps,numBranches],dtype=treedata["Snap_%03d" %opt.startSnap]["OverPlotData"].dtype)
+        plotData["xposData"] = np.zeros([opt.Nsnaps,numBranches],dtype=np.float32) #The x-position of the point
+        plotData["SizeData"] = np.zeros([opt.Nsnaps,numBranches],dtype=treedata["Snap_%03d" %opt.startSnap]["SizeData"].dtype) #The size of the data-point
+        plotData["ColData"] = np.zeros([opt.Nsnaps,numBranches],dtype=treedata["Snap_%03d" %opt.startSnap]["ColData"].dtype) #The color of the point
+        if(plotOpt.overplotdata):
+                plotData["OverPlotData"] = np.zeros([opt.Nsnaps,numBranches],dtype=treedata["Snap_%03d" %opt.startSnap]["OverPlotData"].dtype)
 
 
 
-	pos = np.zeros(3,dtype=np.float32)
-	startpos = np.zeros(3,dtype=np.float32)
-	prevpos = np.zeros(3,dtype=np.float32)
+        pos = np.zeros(3,dtype=np.float32)
+        startpos = np.zeros(3,dtype=np.float32)
+        prevpos = np.zeros(3,dtype=np.float32)
 
 	# Get the snapshot which the main branch comes into existance
-	MainBranchisnap = int(AllStartProgenitors[0]/opt.HALOIDVAL)
+        MainBranchisnap = int(AllStartProgenitors[0]/opt.HALOIDVAL)
 
 	#Store the main branches position and Radius
-	mainBranchPos = np.zeros([opt.Nsnaps,3],dtype=np.float32)
-	mainBranchRadius = np.zeros(opt.Nsnaps,dtype=np.float32)
-	mainBranchIDs = np.zeros(opt.Nsnaps,dtype=np.int64)
+        mainBranchPos = np.zeros([opt.Nsnaps,3],dtype=np.float32)
+        mainBranchRadius = np.zeros(opt.Nsnaps,dtype=np.float32)
+        mainBranchIDs = np.zeros(opt.Nsnaps,dtype=np.int64)
 
 	# print("ibranch snapKey haloID descProgenitor descendant branchRootTail descEndDescendant currEndDescendant descStartProgenitor currStartProgenitor")
 
 
 	#Now we want to walk up from the AllStartProgenitors to build the tree and create the arrays
-	for ibranch in range(numBranches):
+        for ibranch in range(numBranches):
 		#Extract the Root Progenitor for this branch
-		haloID = AllStartProgenitors[ibranch]
-		
+                haloID = AllStartProgenitors[ibranch]
+
 		#Move up the branch setting the plotting data as we go
-		while(True):
+                while(True):
 			#Extract the information for this halo
-			index = int(haloID%opt.HALOIDVAL-1)
-			snap = int(haloID/opt.HALOIDVAL)
+                        index = int(haloID%opt.HALOIDVAL-1)
+                        snap = int(haloID/opt.HALOIDVAL)
 
 
-			snapKey = "Snap_%03d" %snap
-			isnap = snap - opt.startSnap
+                        snapKey = "Snap_%03d" %snap
+                        isnap = snap - opt.startSnap
 
 			#Extract the position for this halo
-			pos[:] =  treedata[snapKey]["Pos"][index]
+                        pos[:] =  treedata[snapKey]["Pos"][index]
 
 			#If at the root progenitor set the previous position to the current
-			if(haloID==AllStartProgenitors[ibranch]):
-				prevpos[:]=pos
+                        if(haloID==AllStartProgenitors[ibranch]):
+                                prevpos[:]=pos
 
-			for k in range(3):
-				xposdiff = pos[k]-prevpos[k]
-				if(abs(xposdiff)>0.8*opt.boxsize):
-					pos[k]=pos[k]-opt.boxsize if(xposdiff>0) else pos[k]+opt.boxsize
+                        for k in range(3):
+                                xposdiff = pos[k]-prevpos[k]
+                                if(abs(xposdiff)>0.8*opt.boxsize):
+                                        pos[k]=pos[k]-opt.boxsize if(xposdiff>0) else pos[k]+opt.boxsize
 			#Store its descendant
-			descendant = treedata[snapKey]["Descendant"][index]
+                        descendant = treedata[snapKey]["Descendant"][index]
 
 			#Set the size and col data to what was requested
-			plotData["SizeData"][isnap,ibranch] = treedata[snapKey]["SizeData"][index]
+                        plotData["SizeData"][isnap,ibranch] = treedata[snapKey]["SizeData"][index]
 
-			if(plotOpt.WWflag):
-				plotData["ColData"][isnap,ibranch] = -2 if(treedata[snapKey]["WWHaloFlag"][index]) else treedata[snapKey]["ColData"][index]
-			else:
-				plotData["ColData"][isnap,ibranch] = treedata[snapKey]["ColData"][index]
+                        if(plotOpt.WWflag):
+                                plotData["ColData"][isnap,ibranch] = -2 if(treedata[snapKey]["WWHaloFlag"][index]) else treedata[snapKey]["ColData"][index]
+                        else:
+                                plotData["ColData"][isnap,ibranch] = treedata[snapKey]["ColData"][index]
 
-			if(plotOpt.overplotdata):
-					plotData["OverPlotData"][isnap,ibranch] = treedata[snapKey]["OverPlotData"][index]
+                        if(plotOpt.overplotdata):
+                                plotData["OverPlotData"][isnap,ibranch] = treedata[snapKey]["OverPlotData"][index]
 
 			#If on the main branch
-			if(ibranch==0):
+                        if(ibranch==0):
 				#Store both its position and Radius
-				mainBranchPos[isnap,:] = pos
-				mainBranchRadius[isnap] = treedata[snapKey]["Radius"][index]
+                                mainBranchPos[isnap,:] = pos
+                                mainBranchRadius[isnap] = treedata[snapKey]["Radius"][index]
 				#If at the root progenitor then store its start position and set its position to be small (non-zero)
-				if(haloID==AllStartProgenitors[ibranch]):
-					startpos[:] = pos
-					plotData["xposData"][isnap,ibranch] = 1e-5
+                                if(haloID==AllStartProgenitors[ibranch]):
+                                        startpos[:] = pos
+                                        plotData["xposData"][isnap,ibranch] = 1e-5
 				#Otherwise track its position relative to its start position
-				else:
-					plotData["xposData"][snap,ibranch] = np.sqrt((np.sum((pos - startpos))**2))
+                                else:
+                                        plotData["xposData"][isnap,ibranch] = np.sqrt(np.sum(((pos - startpos))**2))
 
 				#Store the main branches IDs
-				mainBranchIDs[isnap] = haloID
+                                mainBranchIDs[isnap] = haloID
 
 
 				#If on the main branch check if we have reached the root head
-				if(haloID==descendant): break
+                                if(haloID==descendant): break
 
 
-			else:
+                        else:
 
 				#If the halo exist before the main branch set it to the limit of the plot
-				if(snap<MainBranchisnap):
-					plotData["xposData"][isnap,ibranch] = -1.0
+                                if(snap<MainBranchisnap):
+                                        plotData["xposData"][isnap,ibranch] = -1.0
 				#Otherwise plot its distance relative to the main branch Radius at that snapshot
-				else:
+                                else:
 
-					if(mainBranchRadius[isnap]==0):
-						print("The main branch Radius cannot be found for snapshot",snap,"it will be interpolated from the data for this snapshot")
+                                        if(mainBranchRadius[isnap]==0):
+                                                print("The main branch Radius cannot be found for snapshot",snap,"it will be interpolated from the data for this snapshot")
 						
 						#Interpolate the main branches radius
-						sel = mainBranchRadius>0
-						snaps = np.where(sel)[0]
-						f_Radius = interp1d(snaps,mainBranchRadius[sel])
-						mainBranchRadius[isnap] = f_Radius(isnap)
+                                                sel = mainBranchRadius>0
+                                                snaps = np.where(sel)[0]
+                                                f_Radius = interp1d(snaps,mainBranchRadius[sel])
+                                                mainBranchRadius[isnap] = f_Radius(isnap)
 
 						#Interpolate the main branches position
-						for k in range(3):
-							sel = mainBranchPos[:,k]>0
-							snaps = np.where(sel)[0]
-							f_Radius = interp1d(snaps,mainBranchPos[sel,k])
-							mainBranchPos[isnap,k] = f_Radius(isnap)
+                                                for k in range(3):
+                                                        sel = mainBranchPos[:,k]>0
+                                                        snaps = np.where(sel)[0]
+                                                        f_Radius = interp1d(snaps,mainBranchPos[sel,k])
+                                                        mainBranchPos[isnap,k] = f_Radius(isnap)
 		
-					plotData["xposData"][isnap,ibranch] = np.sqrt(np.sum(((pos - mainBranchPos[isnap]))**2)) / mainBranchRadius[isnap]
+                                        plotData["xposData"][isnap,ibranch] = np.sqrt(np.sum(((pos - mainBranchPos[isnap]))**2)) / mainBranchRadius[isnap]
 					
 
 				# Check if the descendant is equal to the haloID so we have reached the end of this branch
-				if(haloID==descendant):
-					# print("haloID==descendant",treedata[snapKey]["HaloID"][index],AllStartProgenitors[ibranch],treedata[snapKey]["EndDescendant"][index])
+                                if(haloID==descendant):
 					
 					#If we are not at the final snapshot then lets mark it as a branch which dies and doesn't merge with anything
-					if(snap<(opt.Nsnaps-1)):
-						AllBranchIndicators[ibranch]=-3
+                                        if(snap<(opt.Nsnaps-1)):
+                                                AllBranchIndicators[ibranch]=-3
 
 
 
-					break
+                                        break
 				
 				# Otherwise lets extract the descedants progenitor 
-				descIndex = int(descendant%opt.HALOIDVAL-1)
-				descSnap = int(descendant/opt.HALOIDVAL)
-				descSnapKey = "Snap_%03d" %descSnap
-				descProgenitor = treedata[descSnapKey]["Progenitor"][descIndex]
-
+                                descIndex = int(descendant%opt.HALOIDVAL-1)
+                                descSnap = int(descendant/opt.HALOIDVAL)
+                                descSnapKey = "Snap_%03d" %descSnap
+                                descProgenitor = treedata[descSnapKey]["Progenitor"][descIndex]
+                 
 				#Now lets see if the progenitor points back to the haloID, if not then it has merged with another branch
-				if(haloID!=descProgenitor): 
+                                if(haloID!=descProgenitor): 
 
 					#Lets find the StartProgenitor for this branch:
-					branchRootTail = treedata[descSnapKey]["StartProgenitor"][descIndex]
+                                        branchRootTail = treedata[descSnapKey]["StartProgenitor"][descIndex]
 					#Lets see if it doesn't point to the mainBranches StartProgenitor
-					if(branchRootTail!=AllStartProgenitors[0]):
+                                        if(branchRootTail!=AllStartProgenitors[0]):
 						#Otherwise lets track which branch in the StartProgenitor list it points to
-						sel = np.where(AllStartProgenitors==branchRootTail)[0]
+                                                sel = np.where(AllStartProgenitors==branchRootTail)[0]
 
 
 						
-						if(sel==ibranch):
+                                                if(sel==ibranch):
 							#raise SystemExit("Something has gone wrong in the construction of the tree")
-							break
+                                                        break
 
 
 						# If it merged with something that has aleady been found
-						if(len(sel)==1):
+                                                if(len(sel)==1):
 							#Insert that into the branch indicators which one it points to
-							AllBranchIndicators[ibranch]=sel
-						else:
-							AllBranchIndicators[ibranch]=-4
+                                                        AllBranchIndicators[ibranch]=sel
+                                                else:
+                                                        AllBranchIndicators[ibranch]=-4
 
-					break
+                                        break
 
 			#Now move onto the next halo up the branch
-			prevpos[:] = pos
-			haloID = descendant
+                        prevpos[:] = pos
+                        haloID = descendant 
+                #if np.max(plotData["SizeData"][:,ibranch])>1000:
+                        #print('MaxMass:',np.max(plotData["SizeData"][:,ibranch]))
+
 
 	##### Now lets sort the arrays using the data in the plotData["SizeData"] array
 
 	#Store the maximum size in each branch
-	BranchMaxSize = np.amax(plotData["SizeData"],axis=0)
+        BranchMaxSize = np.amax(plotData["SizeData"],axis=0)
 
 	#Sort the branches so the largest branch are next to the main branch
-	sortIndx = np.argsort(BranchMaxSize)[::-1].astype(np.int32)
+        sortIndx = np.argsort(BranchMaxSize)[::-1].astype(np.int32)
 
-	if(sortIndx[0]!=0):
-		sel = sortIndx==0
-		sortIndx[0],sortIndx[sel] = sortIndx[sel],sortIndx[0]
+        if(sortIndx[0]!=0):
+                sel = sortIndx==0
+                sortIndx[0],sortIndx[sel] = sortIndx[sel],sortIndx[0]
 
 
 	#Now apply that sorting to the data
-	depthIndicator = np.ones(numBranches,dtype=np.int32)
-	depthIndicator[0]=0
+        depthIndicator = np.ones(numBranches,dtype=np.int32)
+        depthIndicator[0]=0
 
 	#Keep track  of which index we are at
-	Indx = 0
+        Indx = 0
 
 	#Keep looping until we reach the end index
-	while(Indx<(len(sortIndx)-1)):
+        while(Indx<(len(sortIndx)-1)):
 
 		#Sort the branches so the progenitor branches are next to their merging branches
-		Indx,sortIndx,depthIndicator = MoveBranches(sortIndx[Indx],AllBranchIndicators,depthIndicator,sortIndx,Indx+1,2)
+                Indx,sortIndx,depthIndicator = MoveBranches(sortIndx[Indx],AllBranchIndicators,depthIndicator,sortIndx,Indx+1,2)
 
 
 	#Apply this sorting to the data
-	plotData["xposData"] = plotData["xposData"][:,sortIndx]
-	plotData["SizeData"] = plotData["SizeData"][:,sortIndx]
-	plotData["ColData"] = plotData["ColData"][:,sortIndx]
-	if(plotOpt.overplotdata):
-		plotData["OverPlotData"] = plotData["OverPlotData"][:,sortIndx]
-	AllBranchIndicators = AllBranchIndicators[sortIndx]
-	depthIndicator = depthIndicator[sortIndx]
+        plotData["xposData"] = plotData["xposData"][:,sortIndx]
+        plotData["SizeData"] = plotData["SizeData"][:,sortIndx]
+        plotData["ColData"] = plotData["ColData"][:,sortIndx]
+        if(plotOpt.overplotdata):
+                plotData["OverPlotData"] = plotData["OverPlotData"][:,sortIndx]
+        AllBranchIndicators = AllBranchIndicators[sortIndx]
+        depthIndicator = depthIndicator[sortIndx]
 
 
 
 	#Set all the branches marked as subhalos to a depth of -1
-	depthIndicator[AllBranchIndicators<-1]=-1
+        depthIndicator[AllBranchIndicators<-1]=-1
 
-	print("Done creating the plot arrays in",time.time()-start)
+        print("Done creating the plot arrays in",time.time()-start)
 
 	# if(outputArrays):
 
@@ -483,7 +485,7 @@ def createPlotArrays(opt,plotOpt,treedata,SelIndex,outdir='',outputArrays=False)
 
 	# else:
 	
-	return plotData,AllBranchIndicators,depthIndicator,sortIndx,mainBranchIDs
+        return plotData,AllBranchIndicators,depthIndicator,sortIndx,mainBranchIDs
 
 
 
