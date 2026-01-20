@@ -238,7 +238,7 @@ def LoadETFCatalogue(filename,plotOpt):
                 orderDataKey = plotOpt.orderDataset
                 binDataKey = plotOpt.binDataset
 
-	# Lets load in the data
+	    # Lets load in the data
         for snap in range(opt.startSnap,opt.endSnap+1):
 
                 snapKey = splitSnapKey %snap
@@ -264,11 +264,12 @@ def LoadETFCatalogue(filename,plotOpt):
                         treedata[snapKey]["OverPlotData"] = np.array(hdffile[snapKey][overDataKey]) 
 		
 
-	#Find the indexes which the dendograms are to be plotted
+	    #Find the indexes which the dendograms are to be plotted
         if(orderDataKey=="HaloID"):
                 indexes=np.arange(plotOpt.nPlot)
         else:
-                indexes=np.argsort(hdffile["Snap_%03d" %opt.endSnap][orderDataKey])[::-1][:plotOpt.nPlot]
+                indexes=np.argsort(hdffile["Snap_%03d" %opt.endSnap][orderDataKey])[::-1][:plotOpt.nPlot] # ANGEL: maximum number nPlot to show
+                # ANGEL: "Bin" output considering the bin of a property between >lowBin and <upBin
                 if(binDataKey=="Bin"):
                         # indexes in a bin of the property (ordered by the property itself)
                         tmp = hdffile["Snap_%03d" %opt.endSnap][orderDataKey]

@@ -112,14 +112,16 @@ def convToMTF(numsnaps,halodata,fieldsDict,h,vol,HALOIDVAL = 1000000000000):
                                 ifileindex+=1
                         indexoffset[i]+=prevcount
                         count+=1
-
+                
+                # ANGEL: case when we want to run all the subvolumes at once 
                 if vol=="all":
-                        treedata[snapKey]["HaloID"][sel] = halodata[snapKey]["HaloID"][sel] - (fileindex*1e8).astype(np.int64) + indexoffset # ANGEL: there is an overlap between non-interpolated and interpolated ones: remove the +1 in non-interpolated IDs
+                        treedata[snapKey]["HaloID"][sel] = halodata[snapKey]["HaloID"][sel] - (fileindex*1e8).astype(np.int64) + indexoffset # ANGEL: there is an overlap between non-interpolated and interpolated ones, have to remove the +1 in non-interpolated IDs
                         treedata[snapKey]["HaloID"][~sel] = snap * HALOIDVAL + np.arange(seachoffset[snap],halodata[snapKey]["HaloID"].size) +1 # ANGEL: here +1 is necessary to offset the interpolated values
+                # ANGEL: case when we want to run just the first subvolume
                 elif vol=="one":
-                        s = np.shape(np.where(sel==True))[1] # SUBVOLUME
-                        treedata[snapKey]["HaloID"][sel] = snap* HALOIDVAL + np.arange(0,s) +1 # SUBVOLUME
-                        treedata[snapKey]["HaloID"][~sel] = snap * HALOIDVAL + np.arange(s,halodata[snapKey]["HaloID"].size) +1 # SUBVOLUME
+                        s = np.shape(np.where(sel==True))[1]
+                        treedata[snapKey]["HaloID"][sel] = snap* HALOIDVAL + np.arange(0,s) +1
+                        treedata[snapKey]["HaloID"][~sel] = snap * HALOIDVAL + np.arange(s,halodata[snapKey]["HaloID"].size) +1
 
 		#Change the host halo ID for interpolated hosts
 		# haloiddict[snapKey] = dict(zip(halodata[snapKey]["HaloID"][~sel],treedata[snapKey]["HaloID"][~sel]))

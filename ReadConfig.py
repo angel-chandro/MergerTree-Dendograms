@@ -35,9 +35,9 @@ class plotOptions(object):
                 self.promptFlag = 1
                 self.markerSizeDataset = "Mass"
                 self.orderDataset = "Mass"
-                self.binDataset = ""
-                self.lowBin = ""
-                self.upBin = ""
+                self.binDataset = "" # ANGEL: dataset to use for the bins
+                self.lowBin = "" # ANGEL: loer limit bin (>lowBin)
+                self.upBin = "" # ANGEL: upper limit bin (<upBin)
                 self.markerColorDataset = "Radius"
                 self.overplotDataset = "HaloID"
                 self.nplot = 100
@@ -141,14 +141,14 @@ class plotOptions(object):
 
                                 elif(line[0]=="orderDataset"):
                                         self.orderDataset = line[1]
-
-                                elif(line[0]=="binDataset"):
+                                
+                                elif(line[0]=="binDataset"): # ANGEL
                                         self.binDataset = line[1]
 
-                                elif(line[0]=="lowBin"):
+                                elif(line[0]=="lowBin"): # ANGEL
                                         self.lowBin = float(line[1])
 
-                                elif(line[0]=="upBin"):
+                                elif(line[0]=="upBin"): # ANGEL
                                         self.upBin = float(line[1])
 
                                 elif(line[0]=="markerColorDataset"):
