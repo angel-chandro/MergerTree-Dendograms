@@ -24,6 +24,8 @@ First the halo catalogue needs to be converted into Efficient Tree Format (ETF) 
 
 - **Rockstar** - A filelist containing the Consistent Trees *.dat filenames
 
+- **Dtrees** - The merger tree catalogues in "Dtreesfilename=/path/to/tree_XXX" and specifying "Dtreesvols" if "all" or "one" (just the first subvolume)
+
 After the config file has been altered, the conversion tool can be run by typing:
 
 `python convToETF.py <Format> convToETF.cfg`
